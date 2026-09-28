@@ -57,6 +57,18 @@
     .tab-btn.active-1f { background-color: #ffffff; color: #be123c; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
     .tab-btn.active-3f { background-color: #ffffff; color: #475569; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
 
+    /* 상단 현재 기록 상태 배너 및 경고창 */
+    .status-banner { background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.04); }
+    .status-info-row { display: flex; justify-content: space-between; align-items: center; }
+    .status-label { font-size: 0.82rem; font-weight: 700; color: #64748b; }
+    .status-chips-wrap { display: flex; gap: 6px; align-items: center; }
+    .status-pill { background-color: var(--primary-color); color: white; padding: 3px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; }
+    .status-pill.muted { background-color: #94a3b8; }
+    
+    .mismatch-alert { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #fdba74; display: none; align-items: center; justify-content: space-between; gap: 8px; background-color: #fff7ed; padding: 10px; border-radius: 8px; }
+    .mismatch-text { font-size: 0.82rem; color: #c2410c; font-weight: 600; line-height: 1.4; }
+    .btn-fix-time { background-color: #ea580c; color: white; border: none; padding: 5px 9px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+
     .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     .section-title { font-size: 0.82rem; font-weight: 700; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
     
@@ -100,7 +112,7 @@
     .btn-edit { background-color: #e0f2fe; border: 1px solid #7dd3fc; color: #0284c7; font-weight: 700; font-size: 0.75rem; border-radius: 6px; padding: 4px 7px; cursor: pointer; white-space: nowrap; }
     .btn-del { background-color: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; font-weight: 700; font-size: 0.75rem; border-radius: 6px; padding: 4px 7px; cursor: pointer; white-space: nowrap; }
 
-    /* 조사 가이드 글자 크기 및 가독성 대폭 향상 */
+    /* 조사 가이드 스타일 */
     .guide-box { line-height: 1.7; font-size: 1rem; color: #334155; }
     .guide-title { font-weight: 800; font-size: 1.12rem; color: #0f172a; margin-top: 14px; margin-bottom: 6px; }
     .guide-desc { font-size: 0.95rem; color: #64748b; margin-bottom: 14px; line-height: 1.6; }
@@ -119,14 +131,14 @@
     <button class="btn-export" onclick="exportToExcel()">📊 전체 엑셀 저장</button>
   </header>
 
-  <!-- 상단 네비게이션 탭 -->
+  <!-- 상단 네비게이션 탭 (자유롭게 전환 가능) -->
   <div class="tab-bar">
     <div class="tab-btn" id="tabGuide" onclick="switchView('GUIDE')">📖 조사 가이드</div>
     <div class="tab-btn active-1f" id="tab1F" onclick="switchView('1F')">📚 도서관(1F)</div>
     <div class="tab-btn" id="tab3F" onclick="switchView('3F')">☕ 라운지(3F)</div>
   </div>
 
-  <!-- 1. [조사 가이드] 페이지 (글씨 크기 확대 적용) -->
+  <!-- 1. [조사 가이드] 페이지 -->
   <div id="pageGuide" style="display: none;">
     <div class="card guide-box">
       <div class="guide-title">📌 1. 조사 목적</div>
@@ -149,13 +161,30 @@
         <li><strong>비고란 표기:</strong> <span class="highlight-red">가족 단위, DVD 시청, 직원(3층만 해당)</span>의 경우 해당 사항이 있을 때 비고란에 표기.</li>
       </ul>
       <div style="margin-top: 20px;">
-        <button class="btn-submit" style="background-color: #0284c7;" onclick="switchView('1F')">기록 시작하기 👉</button>
+        <button class="btn-submit" style="background-color: #0284c7;" onclick="startRecordFromGuide()">기록 시작하기 👉</button>
       </div>
     </div>
   </div>
 
   <!-- 2. [체크리스트 입력] 페이지 -->
   <div id="pageRecord">
+    
+    <!-- 📍 상단 실시간 기록 상태 & 불일치 경고 배너 -->
+    <div class="status-banner">
+      <div class="status-info-row">
+        <span class="status-label">📍 현재 기록 대상</span>
+        <div class="status-chips-wrap">
+          <span class="status-pill" id="bannerTimePill">11:00</span>
+          <span class="status-pill muted" id="bannerAreaPill">구역 선택 필요</span>
+        </div>
+      </div>
+      <div class="mismatch-alert" id="mismatchAlert">
+        <span class="mismatch-text" id="mismatchMsg">⚠️ 지금은 15:00 조사 시간대예요. 11:00으로 기록 중인 게 맞나요?</span>
+        <button type="button" class="btn-fix-time" onclick="fixTimeToCurrent()">지금 시간으로 변경</button>
+      </div>
+    </div>
+
+    <!-- 평면도 아코디언 -->
     <div class="map-box">
       <div class="map-header" onclick="toggleMap()">
         <span id="mapTitle">🗺️ 도서관(1F) 평면도 보기 (클릭하여 열기)</span>
@@ -175,8 +204,8 @@
 
       <div class="section-title">조사 시간</div>
       <div class="grid-options grid-2" id="timeGroup" style="margin-bottom: 14px;">
-        <div class="btn-chip" onclick="selectSingle(this)">11:00</div>
-        <div class="btn-chip" onclick="selectSingle(this)">15:00</div>
+        <div class="btn-chip" onclick="handleTimeSelect(this)">11:00</div>
+        <div class="btn-chip" onclick="handleTimeSelect(this)">15:00</div>
       </div>
 
       <div class="section-title" id="areaSectionTitle">구역</div>
@@ -326,40 +355,6 @@
     { date: "2026-09-27-일", time: "15:00", area: "3구역", gender: "남", age: "청소년", activity: "독서", note: "" }
   ];
 
-  const initialData3F = [
-    { date: "2026-09-22-화", time: "11:00", area: "2구역", gender: "남", age: "중장년(40~50대)", activity: "개인PC 사용", note: "" },
-    { date: "2026-09-22-화", time: "11:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
-    { date: "2026-09-22-화", time: "11:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "개인PC 사용, 독서", note: "" },
-    { date: "2026-09-22-화", time: "11:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
-    { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "남", age: "시니어(60대 이상)", activity: "개인PC 사용", note: "" },
-    { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "독서, 공부", note: "" },
-    { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
-    { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "독서, 개인PC 사용", note: "" },
-    { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "공부", note: "" },
-    { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "남", age: "중장년(40~50대)", activity: "개인PC 사용", note: "" },
-    { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "공부", note: "" },
-    { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
-    { date: "2026-09-22-화", time: "15:00", area: "3구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
-    { date: "2026-09-22-화", time: "15:00", area: "3구역", gender: "여", age: "중장년(40~50대)", activity: "독서", note: "빈백 활용" },
-    { date: "2026-09-22-화", time: "15:00", area: "4구역", gender: "남", age: "중장년(40~50대)", activity: "공부, 개인PC 사용", note: "" },
-    { date: "2026-09-23-수", time: "11:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "공부", note: "" },
-    { date: "2026-09-23-수", time: "11:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
-    { date: "2026-09-23-수", time: "11:00", area: "2구역", gender: "남", age: "중장년(40~50대)", activity: "독서, 공부, 개인PC 사용", note: "" },
-    { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
-    { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "휴식", note: "직원" },
-    { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "공부, 개인PC 사용", note: "" },
-    { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
-    { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
-    { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "남", age: "중장년(40~50대)", activity: "개인PC 사용", note: "" },
-    { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "남", age: "중장년(40~50대)", activity: "개인PC 사용", note: "" },
-    { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "남", age: "시니어(60대 이상)", activity: "독서", note: "" },
-    { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "남", age: "청년(20~30대)", activity: "휴식", note: "빈백 활용, 직원" },
-    { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "남", age: "중장년(40~50대)", activity: "휴식", note: "빈백 활용, 직원" },
-    { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "여", age: "청년(20~30대)", activity: "휴식", note: "" },
-    { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "여", age: "중장년(40~50대)", activity: "독서", note: "" },
-    { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "남", age: "중장년(40~50대)", activity: "개인PC 사용", note: "" }
-  ];
-
   const floorImages = {
     '1F': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%"><rect width="500" height="500" fill="%23ffffff"/><path d="M 0,0 L 210,0 A 210,210 0 0,1 0,210 Z" fill="%23dfb6ac"/><text x="105" y="70" font-family="sans-serif" font-weight="bold" font-size="28" text-anchor="middle" fill="%23000000">1구역</text><text x="105" y="105" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="%23000000">큰 테이블 + 창가 좌석</text><text x="105" y="130" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="%23000000">+ 원형 탁자/의자</text><path d="M 500,0 L 290,0 A 210,210 0 0,0 500,210 Z" fill="%23dfb6ac"/><text x="395" y="70" font-family="sans-serif" font-weight="bold" font-size="28" text-anchor="middle" fill="%23000000">2구역</text><text x="395" y="105" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="%23000000">PC + 좌식</text><path d="M 500,500 L 290,500 A 210,210 0 0,1 500,290 Z" fill="%23dfb6ac"/><text x="400" y="415" font-family="sans-serif" font-weight="bold" font-size="28" text-anchor="middle" fill="%23000000">3구역</text><text x="400" y="445" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="%23000000">어린이 서가 + 소파</text><rect x="0" y="275" width="45" height="110" fill="%23f9e9e5"/><text x="22" y="310" font-family="sans-serif" font-weight="bold" font-size="20" text-anchor="middle" fill="%23000000">출</text><text x="22" y="340" font-family="sans-serif" font-weight="bold" font-size="20" text-anchor="middle" fill="%23000000">입</text><text x="22" y="370" font-family="sans-serif" font-weight="bold" font-size="20" text-anchor="middle" fill="%23000000">구</text><rect x="0" y="435" width="225" height="65" fill="%23f9e9e5"/><text x="112" y="478" font-family="sans-serif" font-weight="bold" font-size="22" text-anchor="middle" fill="%23000000">데 스 크</text></svg>',
     '3F': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%"><rect width="500" height="500" fill="%23ffffff"/><rect x="25" y="0" width="110" height="500" fill="%23c4c4c4"/><text x="10" y="210" font-family="sans-serif" font-weight="bold" font-size="18" fill="%23000000">창</text><text x="10" y="245" font-family="sans-serif" font-weight="bold" font-size="18" fill="%23000000">가</text><text x="80" y="200" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">3구역</text><text x="80" y="235" font-family="sans-serif" font-weight="bold" font-size="14" text-anchor="middle" fill="%23000000">빈백 좌석</text><text x="80" y="255" font-family="sans-serif" font-weight="bold" font-size="14" text-anchor="middle" fill="%23000000">+ 나머지</text><text x="80" y="275" font-family="sans-serif" font-weight="bold" font-size="14" text-anchor="middle" fill="%23000000">테이블 좌석</text><rect x="170" y="0" width="55" height="250" fill="%23c4c4c4"/><rect x="225" y="0" width="105" height="250" fill="%23eeeeee"/><text x="197" y="90" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">4</text><text x="197" y="130" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">구</text><text x="197" y="170" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">역</text><text x="277" y="130" font-family="sans-serif" font-weight="bold" font-size="22" text-anchor="middle" fill="%23000000">기둥</text><rect x="170" y="250" width="160" height="55" fill="%23c4c4c4"/><text x="250" y="285" font-family="sans-serif" font-weight="bold" font-size="16" text-anchor="middle" fill="%23000000">계단형 좌석</text><rect x="365" y="210" width="135" height="175" fill="%23c4c4c4"/><text x="432" y="270" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">1구역</text><text x="432" y="305" font-family="sans-serif" font-weight="bold" font-size="15" text-anchor="middle" fill="%23000000">정수기쪽</text><text x="432" y="330" font-family="sans-serif" font-weight="bold" font-size="15" text-anchor="middle" fill="%23000000">큰 테이블 좌석</text><rect x="155" y="395" width="345" height="105" fill="%23c4c4c4"/><text x="325" y="445" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">2구역</text><text x="325" y="475" font-family="sans-serif" font-weight="bold" font-size="15" text-anchor="middle" fill="%23000000">긴 박스형 좌석</text><rect x="395" y="0" width="105" height="42" fill="%23eeeeee"/><text x="447" y="30" font-family="sans-serif" font-weight="bold" font-size="22" text-anchor="middle" fill="%23000000">E/V</text></svg>'
@@ -375,11 +370,21 @@
     '3F': ['1구역', '2구역', '3구역', '4구역']
   };
 
+  // 14:00 기준 현재 예상 조사 시간 반환
+  function getExpectedSurveyTime() {
+    const currentHour = new Date().getHours();
+    return currentHour < 14 ? '11:00' : '15:00';
+  }
+
   window.onload = async function() {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('dateInput').value = today;
     updateDatePreview();
-    switchView('1F');
+
+    // 4. 요일별 기본 탭 자동 선택 (월요일: 3F 라운지 / 화~일: 1F 도서관)
+    const dayOfWeek = new Date().getDay(); // 0: 일, 1: 월, 2: 화...
+    const initialView = (dayOfWeek === 1) ? '3F' : '1F';
+    switchView(initialView);
 
     await checkAndSeedDatabase();
     listenToFirebase();
@@ -440,11 +445,68 @@
     icon.innerText = isOpen ? '▼' : '▲';
   }
 
-  function resetForm() {
-    document.querySelectorAll('.btn-chip').forEach(c => c.classList.remove('active'));
+  // 3. 상단 상태 배너 및 시간 불일치 감지 업데이트
+  function updateStatusDisplay() {
+    const timeActive = document.querySelector('#timeGroup .active');
+    const areaActive = document.querySelector('#areaGroup .active');
+
+    const bannerTime = document.getElementById('bannerTimePill');
+    const bannerArea = document.getElementById('bannerAreaPill');
+    const alertBox = document.getElementById('mismatchAlert');
+    const alertMsg = document.getElementById('mismatchMsg');
+
+    const selectedTime = timeActive ? timeActive.innerText.trim() : null;
+    const selectedArea = areaActive ? areaActive.innerText.trim() : null;
+
+    bannerTime.innerText = selectedTime || '시간 미선택';
+    if (selectedArea) {
+      bannerArea.innerText = selectedArea;
+      bannerArea.classList.remove('muted');
+    } else {
+      bannerArea.innerText = '구역 선택 필요';
+      bannerArea.classList.add('muted');
+    }
+
+    const expectedTime = getExpectedSurveyTime();
+    if (selectedTime && selectedTime !== expectedTime) {
+      alertBox.style.display = 'flex';
+      alertMsg.innerText = `⚠️ 지금은 ${expectedTime} 조사 시간대예요. (${selectedTime} 기록 중)`;
+    } else {
+      alertBox.style.display = 'none';
+    }
+  }
+
+  // 경고창 클릭 시 현재 시간대로 즉시 자동 교체
+  function fixTimeToCurrent() {
+    const expected = getExpectedSurveyTime();
+    setChipActive('#timeGroup', expected);
+    updateStatusDisplay();
+  }
+
+  // 2. 폼 초기화: keepContext=true이면 날짜, 시간, 구역을 남기고 나머지만 회색조로 비움
+  function resetForm(keepContext = false) {
+    if (!keepContext) {
+      // 시간은 현재 시각 기준 기본값으로 세팅
+      setChipActive('#timeGroup', getExpectedSurveyTime());
+      // 구역은 미선택 회색조
+      document.querySelectorAll('#areaGroup .btn-chip').forEach(c => c.classList.remove('active'));
+    }
+
+    // 성별, 연령대, 활동은 항상 미선택 회색조로 초기화
+    document.querySelectorAll('#genderGroup .btn-chip').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('#ageGroup .btn-chip').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('#activityGroup .btn-chip').forEach(c => c.classList.remove('active'));
+
     document.getElementById('noteInput').value = '';
     document.getElementById('etcInput').value = '';
     document.getElementById('etcWrapper').style.display = 'none';
+
+    updateStatusDisplay();
+  }
+
+  function startRecordFromGuide() {
+    const day = new Date().getDay();
+    switchView(day === 1 ? '3F' : '1F');
   }
 
   function switchView(view) {
@@ -489,7 +551,7 @@
 
     renderAreas();
     renderActivities();
-    resetForm();
+    resetForm(false);
     renderTable();
   }
 
@@ -503,7 +565,10 @@
       const chip = document.createElement('div');
       chip.className = 'btn-chip';
       chip.innerText = area;
-      chip.onclick = function() { selectSingle(this); };
+      chip.onclick = function() { 
+        selectSingle(this);
+        updateStatusDisplay();
+      };
       container.appendChild(chip);
     });
   }
@@ -531,6 +596,11 @@
       document.getElementById('etcWrapper').style.display = isEtcActive ? 'block' : 'none';
       if (isEtcActive) document.getElementById('etcInput').focus();
     }
+  }
+
+  function handleTimeSelect(el) {
+    selectSingle(el);
+    updateStatusDisplay();
   }
 
   function selectSingle(el) {
@@ -608,7 +678,8 @@
       } else {
         recordData.createdAt = Date.now();
         await db.collection(collectionName).add(recordData);
-        resetForm();
+        // 날짜, 시간, 구역은 유지하고 성별·연령·활동·비고만 깨끗하게 초기화!
+        resetForm(true);
       }
     } catch (err) {
       alert('저장 실패: ' + err.message);
@@ -668,6 +739,7 @@
     submitBtn.style.backgroundColor = '#0284c7';
     document.getElementById('btnCancel').style.display = 'block';
 
+    updateStatusDisplay();
     window.scrollTo({ top: 120, behavior: 'smooth' });
     renderTable();
   }
@@ -679,7 +751,7 @@
     submitBtn.style.backgroundColor = '';
     document.getElementById('btnCancel').style.display = 'none';
 
-    resetForm();
+    resetForm(false);
     renderTable();
   }
 
