@@ -12,11 +12,11 @@
 
   <style>
     :root {
-      --primary-color: #be123c;
-      --primary-hover: #9f1239;
-      --primary-light: #fff1f2;
-      --primary-border: #f43f5e;
-      --bg-color: #fff5f5;
+      --primary-color: #0284c7;
+      --primary-hover: #0369a1;
+      --primary-light: #f0f9ff;
+      --primary-border: #38bdf8;
+      --bg-color: #f8fafc;
     }
 
     body.theme-guide {
@@ -123,7 +123,7 @@
     .status-sync { font-size: 0.75rem; color: #16a34a; font-weight: bold; margin-left: 6px; }
   </style>
 </head>
-<body class="theme-1f">
+<body class="theme-guide">
 
 <div class="container">
   <header>
@@ -131,15 +131,15 @@
     <button class="btn-export" onclick="exportToExcel()">📊 전체 엑셀 저장</button>
   </header>
 
-  <!-- 상단 네비게이션 탭 (자유롭게 전환 가능) -->
+  <!-- 상단 네비게이션 탭 -->
   <div class="tab-bar">
-    <div class="tab-btn" id="tabGuide" onclick="switchView('GUIDE')">📖 조사 가이드</div>
-    <div class="tab-btn active-1f" id="tab1F" onclick="switchView('1F')">📚 도서관(1F)</div>
+    <div class="tab-btn active-guide" id="tabGuide" onclick="switchView('GUIDE')">📖 조사 가이드</div>
+    <div class="tab-btn" id="tab1F" onclick="switchView('1F')">📚 도서관(1F)</div>
     <div class="tab-btn" id="tab3F" onclick="switchView('3F')">☕ 라운지(3F)</div>
   </div>
 
-  <!-- 1. [조사 가이드] 페이지 -->
-  <div id="pageGuide" style="display: none;">
+  <!-- 1. [조사 가이드] 페이지 (첫 화면 고정) -->
+  <div id="pageGuide" style="display: block;">
     <div class="card guide-box">
       <div class="guide-title">📌 1. 조사 목적</div>
       <p class="guide-desc">과학문화센터 일일 방문객 수 및 이용 행태를 파악·분석하여 향후 센터 공간 운영 및 서비스 개선에 활용하고자 함.</p>
@@ -167,7 +167,7 @@
   </div>
 
   <!-- 2. [체크리스트 입력] 페이지 -->
-  <div id="pageRecord">
+  <div id="pageRecord" style="display: none;">
     
     <!-- 📍 상단 실시간 기록 상태 & 불일치 경고 배너 -->
     <div class="status-banner">
@@ -179,7 +179,7 @@
         </div>
       </div>
       <div class="mismatch-alert" id="mismatchAlert">
-        <span class="mismatch-text" id="mismatchMsg">⚠️ 지금은 15:00 조사 시간대예요. 11:00으로 기록 중인 게 맞나요?</span>
+        <span class="mismatch-text" id="mismatchMsg">⚠️ 지금은 15:00 조사 시간대예요. (11:00 기록 중)</span>
         <button type="button" class="btn-fix-time" onclick="fixTimeToCurrent()">지금 시간으로 변경</button>
       </div>
     </div>
@@ -381,10 +381,8 @@
     document.getElementById('dateInput').value = today;
     updateDatePreview();
 
-    // 4. 요일별 기본 탭 자동 선택 (월요일: 3F 라운지 / 화~일: 1F 도서관)
-    const dayOfWeek = new Date().getDay(); // 0: 일, 1: 월, 2: 화...
-    const initialView = (dayOfWeek === 1) ? '3F' : '1F';
-    switchView(initialView);
+    // ★ 첫 화면은 무조건 '조사 가이드'로 고정 시작
+    switchView('GUIDE');
 
     await checkAndSeedDatabase();
     listenToFirebase();
@@ -445,7 +443,7 @@
     icon.innerText = isOpen ? '▼' : '▲';
   }
 
-  // 3. 상단 상태 배너 및 시간 불일치 감지 업데이트
+  // 상단 상태 배너 및 시간 불일치 감지 업데이트
   function updateStatusDisplay() {
     const timeActive = document.querySelector('#timeGroup .active');
     const areaActive = document.querySelector('#areaGroup .active');
@@ -476,23 +474,19 @@
     }
   }
 
-  // 경고창 클릭 시 현재 시간대로 즉시 자동 교체
   function fixTimeToCurrent() {
     const expected = getExpectedSurveyTime();
     setChipActive('#timeGroup', expected);
     updateStatusDisplay();
   }
 
-  // 2. 폼 초기화: keepContext=true이면 날짜, 시간, 구역을 남기고 나머지만 회색조로 비움
   function resetForm(keepContext = false) {
     if (!keepContext) {
-      // 시간은 현재 시각 기준 기본값으로 세팅
+      // 현재 시각 기준 시간대 자동 선택 (< 14:00 -> 11:00 / >= 14:00 -> 15:00)
       setChipActive('#timeGroup', getExpectedSurveyTime());
-      // 구역은 미선택 회색조
       document.querySelectorAll('#areaGroup .btn-chip').forEach(c => c.classList.remove('active'));
     }
 
-    // 성별, 연령대, 활동은 항상 미선택 회색조로 초기화
     document.querySelectorAll('#genderGroup .btn-chip').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('#ageGroup .btn-chip').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('#activityGroup .btn-chip').forEach(c => c.classList.remove('active'));
@@ -504,9 +498,13 @@
     updateStatusDisplay();
   }
 
+  // ★ 조사 가이드에서 [기록 시작하기] 클릭 시 요일/시간 판단 후 자동 이동
   function startRecordFromGuide() {
-    const day = new Date().getDay();
-    switchView(day === 1 ? '3F' : '1F');
+    const day = new Date().getDay(); // 0: 일, 1: 월, 2: 화...
+    // 월요일(1)이면 라운지(3F), 화~일이면 도서관(1F)
+    const targetView = (day === 1) ? '3F' : '1F';
+    switchView(targetView);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function switchView(view) {
@@ -678,7 +676,7 @@
       } else {
         recordData.createdAt = Date.now();
         await db.collection(collectionName).add(recordData);
-        // 날짜, 시간, 구역은 유지하고 성별·연령·활동·비고만 깨끗하게 초기화!
+        // 날짜, 시간, 구역 유지 / 성별·연령·활동·비고 초기화
         resetForm(true);
       }
     } catch (err) {
