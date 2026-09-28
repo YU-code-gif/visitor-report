@@ -126,23 +126,23 @@
   <div id="pageGuide" style="display: none;">
     <div class="card guide-box">
       <div class="guide-title">📌 1. 조사 목적</div>
-      <p style="font-size: 0.86rem; color: #64748b; margin-bottom: 12px;">과학문화센터 일일 방문객 수 및 이용 행태를 파악·분석하여 향후 센터 공간 운영 및 서비스 개선에 활용하고자 함.[cite: 1]</p>
+      <p style="font-size: 0.86rem; color: #64748b; margin-bottom: 12px;">과학문화센터 일일 방문객 수 및 이용 행태를 파악·분석하여 향후 센터 공간 운영 및 서비스 개선에 활용하고자 함.</p>
 
       <div class="guide-title">⏰ 2. 분석 시간 및 요일별 규칙</div>
       <div class="guide-rule">
-        <strong>조사 시간:</strong> 하루 2회 (오전 11:00 / 오후 15:00)[cite: 1]<br>
+        <strong>조사 시간:</strong> 하루 2회 (오전 11:00 / 오후 15:00)<br>
         <strong>⚠️ 요일별 체크 대상:</strong><br>
-        • <strong>화 ~ 금:</strong> 도서관(1F) & 라운지(3F) 모두 실시[cite: 1]<br>
-        • <strong>토 · 일요일:</strong> <span style="color:#be123c; font-weight:700;">과학도서관(1F)만</span> 체크 (라운지 X)[cite: 1]<br>
-        • <strong>월요일:</strong> <span style="color:#475569; font-weight:700;">라운지(3F)만</span> 체크 (도서관 휴관)[cite: 1]
+        • <strong>화 ~ 금:</strong> 도서관(1F) & 라운지(3F) 모두 실시<br>
+        • <strong>토 · 일요일:</strong> <span style="color:#be123c; font-weight:700;">과학도서관(1F)만</span> 체크 (라운지 X)<br>
+        • <strong>월요일:</strong> <span style="color:#475569; font-weight:700;">라운지(3F)만</span> 체크 (도서관 휴관)
       </div>
 
       <div class="guide-title">✍️ 3. 체크리스트 작성 요령</div>
       <ul style="padding-left: 20px; font-size: 0.85rem; margin-top: 6px;">
-        <li>분석 장소를 돌아다니며 방문객 <strong>한 명 한 명에 대한 정보를 관찰하여 기록</strong>[cite: 1]</li>
-        <li><strong>복수 행위:</strong> 한 번에 두 가지 행위 시 모두 중복 체크![cite: 1]</li>
-        <li><strong>자리 비움:</strong> 잠시 자리를 비운 경우도 인원으로 체크![cite: 1]</li>
-        <li><strong>비고란 표기:</strong> <span class="highlight-red">가족 단위, DVD 시청, 직원(3층만 해당)</span>의 경우 해당 사항이 있을 때 비고란에 표기.[cite: 1]</li>
+        <li>분석 장소를 돌아다니며 방문객 <strong>한 명 한 명에 대한 정보를 관찰하여 기록</strong></li>
+        <li><strong>복수 행위:</strong> 한 번에 두 가지 행위 시 모두 중복 체크!</li>
+        <li><strong>자리 비움:</strong> 잠시 자리를 비운 경우도 인원으로 체크!</li>
+        <li><strong>비고란 표기:</strong> <span class="highlight-red">가족 단위, DVD 시청, 직원(3층만 해당)</span>의 경우 해당 사항이 있을 때 비고란에 표기.</li>
       </ul>
       <div style="margin-top: 16px;">
         <button class="btn-submit" style="background-color: #0284c7;" onclick="switchView('1F')">도서관(1F) 기록 시작하기 👉</button>
@@ -171,7 +171,7 @@
 
       <div class="section-title">조사 시간</div>
       <div class="grid-options grid-2" id="timeGroup" style="margin-bottom: 14px;">
-        <div class="btn-chip active" onclick="selectSingle(this)">11:00</div>
+        <div class="btn-chip" onclick="selectSingle(this)">11:00</div>
         <div class="btn-chip" onclick="selectSingle(this)">15:00</div>
       </div>
 
@@ -180,13 +180,13 @@
 
       <div class="section-title">성별</div>
       <div class="grid-options grid-2" id="genderGroup" style="margin-bottom: 14px;">
-        <div class="btn-chip active" onclick="selectSingle(this)">남</div>
+        <div class="btn-chip" onclick="selectSingle(this)">남</div>
         <div class="btn-chip" onclick="selectSingle(this)">여</div>
       </div>
 
       <div class="section-title">연령대</div>
       <div class="grid-options grid-3" id="ageGroup" style="margin-bottom: 14px;">
-        <div class="btn-chip active" onclick="selectSingle(this)">영유아/어린이</div>
+        <div class="btn-chip" onclick="selectSingle(this)">영유아/어린이</div>
         <div class="btn-chip" onclick="selectSingle(this)">청소년</div>
         <div class="btn-chip" onclick="selectSingle(this)">청년(20~30대)</div>
         <div class="btn-chip" onclick="selectSingle(this)">중장년(40~50대)</div>
@@ -239,7 +239,7 @@
 </div>
 
 <script>
-  // Firebase 초기화 (유저 발급 키 적용)
+  // Firebase 설정
   const firebaseConfig = {
     apiKey: "AIzaSyCM1dGwhj8qn6FL8qgh31OlMv7Vl_HPSRI",
     authDomain: "ibs-visitor.firebaseapp.com",
@@ -377,12 +377,10 @@
     updateDatePreview();
     switchView('1F');
 
-    // DB 최초 1회 초기 데이터 심기 검사 및 실시간 구독 시작
     await checkAndSeedDatabase();
     listenToFirebase();
   };
 
-  // Firebase에 기존 데이터(61건+31건)가 없으면 자동으로 올려주는 함수
   async function checkAndSeedDatabase() {
     const snap1F = await db.collection('records_1F').limit(1).get();
     if (snap1F.empty) {
@@ -405,7 +403,6 @@
     }
   }
 
-  // 실시간 동기화 리스너 (누가 추가/삭제하면 모든 기기 화면이 즉시 갱신됨)
   function listenToFirebase() {
     db.collection('records_1F').orderBy('createdAt', 'asc').onSnapshot(snapshot => {
       records1F = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -437,6 +434,14 @@
     const isOpen = content.style.display === 'block';
     content.style.display = isOpen ? 'none' : 'block';
     icon.innerText = isOpen ? '▼' : '▲';
+  }
+
+  // 모든 칩을 선택 해제(회색조 기본값) 상태로 되돌리는 함수
+  function resetForm() {
+    document.querySelectorAll('.btn-chip').forEach(c => c.classList.remove('active'));
+    document.getElementById('noteInput').value = '';
+    document.getElementById('etcInput').value = '';
+    document.getElementById('etcWrapper').style.display = 'none';
   }
 
   function switchView(view) {
@@ -481,6 +486,7 @@
 
     renderAreas();
     renderActivities();
+    resetForm(); // 탭 이동 시에도 전부 회색조로 시작
     renderTable();
   }
 
@@ -490,9 +496,9 @@
     const list = areasConfig[currentView];
     container.className = `grid-options ${list.length === 4 ? 'grid-4' : 'grid-3'}`;
 
-    list.forEach((area, idx) => {
+    list.forEach(area => {
       const chip = document.createElement('div');
-      chip.className = `btn-chip ${idx === 0 ? 'active' : ''}`;
+      chip.className = 'btn-chip';
       chip.innerText = area;
       chip.onclick = function() { selectSingle(this); };
       container.appendChild(chip);
@@ -506,9 +512,9 @@
     document.getElementById('etcInput').value = '';
 
     const list = activitiesConfig[currentView];
-    list.forEach((act, idx) => {
+    list.forEach(act => {
       const chip = document.createElement('div');
-      chip.className = `btn-chip ${idx === 0 ? 'active' : ''}`;
+      chip.className = 'btn-chip';
       chip.innerText = act;
       chip.onclick = function() { toggleActivity(this, act); };
       container.appendChild(chip);
@@ -545,14 +551,24 @@
     if (!rawDate) return alert('날짜를 입력해 주세요.');
     const dateFormatted = `${rawDate}-${getDayName(rawDate)}`;
 
-    const time = document.querySelector('#timeGroup .active').innerText;
-    const area = document.querySelector('#areaGroup .active').innerText;
-    const gender = document.querySelector('#genderGroup .active').innerText;
-    const age = document.querySelector('#ageGroup .active').innerText;
-    const note = document.getElementById('noteInput').value.trim();
+    const timeEl = document.querySelector('#timeGroup .active');
+    if (!timeEl) return alert('조사 시간을 선택해 주세요 (11:00 또는 15:00).');
+    const time = timeEl.innerText;
+
+    const areaEl = document.querySelector('#areaGroup .active');
+    if (!areaEl) return alert('구역을 선택해 주세요.');
+    const area = areaEl.innerText;
+
+    const genderEl = document.querySelector('#genderGroup .active');
+    if (!genderEl) return alert('성별을 선택해 주세요.');
+    const gender = genderEl.innerText;
+
+    const ageEl = document.querySelector('#ageGroup .active');
+    if (!ageEl) return alert('연령대를 선택해 주세요.');
+    const age = ageEl.innerText;
 
     const actChips = document.querySelectorAll('#activityGroup .btn-chip.active');
-    if (actChips.length === 0) return alert('활동을 1개 이상 선택해 주세요.');
+    if (actChips.length === 0) return alert('주요 활동을 1개 이상 선택해 주세요.');
 
     let activities = [];
     actChips.forEach(c => {
@@ -565,6 +581,7 @@
       }
     });
 
+    const note = document.getElementById('noteInput').value.trim();
     const collectionName = currentView === '1F' ? 'records_1F' : 'records_3F';
     const recordData = {
       date: dateFormatted,
@@ -588,8 +605,8 @@
       } else {
         recordData.createdAt = Date.now();
         await db.collection(collectionName).add(recordData);
-        document.getElementById('noteInput').value = '';
-        document.getElementById('etcInput').value = '';
+        // 하나 입력 완료 후 모든 선택 버튼을 회색조로 자동 리셋!
+        resetForm();
       }
     } catch (err) {
       alert('저장 실패: ' + err.message);
@@ -660,10 +677,7 @@
     submitBtn.style.backgroundColor = '';
     document.getElementById('btnCancel').style.display = 'none';
 
-    document.getElementById('noteInput').value = '';
-    document.getElementById('etcInput').value = '';
-    document.getElementById('etcWrapper').style.display = 'none';
-
+    resetForm();
     renderTable();
   }
 
