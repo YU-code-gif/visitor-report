@@ -100,9 +100,13 @@
     .btn-edit { background-color: #e0f2fe; border: 1px solid #7dd3fc; color: #0284c7; font-weight: 700; font-size: 0.75rem; border-radius: 6px; padding: 4px 7px; cursor: pointer; white-space: nowrap; }
     .btn-del { background-color: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; font-weight: 700; font-size: 0.75rem; border-radius: 6px; padding: 4px 7px; cursor: pointer; white-space: nowrap; }
 
-    .guide-box { line-height: 1.6; font-size: 0.9rem; color: #334155; }
-    .guide-title { font-weight: 700; font-size: 1rem; color: #0f172a; margin-top: 10px; margin-bottom: 4px; }
-    .guide-rule { background: #f8fafc; border-left: 3px solid #0284c7; padding: 8px 12px; margin: 8px 0; font-size: 0.85rem; }
+    /* 조사 가이드 글자 크기 및 가독성 대폭 향상 */
+    .guide-box { line-height: 1.7; font-size: 1rem; color: #334155; }
+    .guide-title { font-weight: 800; font-size: 1.12rem; color: #0f172a; margin-top: 14px; margin-bottom: 6px; }
+    .guide-desc { font-size: 0.95rem; color: #64748b; margin-bottom: 14px; line-height: 1.6; }
+    .guide-rule { background: #f0f9ff; border-left: 4px solid #0284c7; padding: 12px 14px; margin: 10px 0; font-size: 0.95rem; line-height: 1.65; border-radius: 0 8px 8px 0; }
+    .guide-list { padding-left: 22px; font-size: 0.95rem; line-height: 1.7; margin-top: 8px; }
+    .guide-list li { margin-bottom: 6px; }
     .highlight-red { color: #dc2626; font-weight: 700; }
     .status-sync { font-size: 0.75rem; color: #16a34a; font-weight: bold; margin-left: 6px; }
   </style>
@@ -122,11 +126,11 @@
     <div class="tab-btn" id="tab3F" onclick="switchView('3F')">☕ 라운지(3F)</div>
   </div>
 
-  <!-- 1. [조사 가이드] 페이지 -->
+  <!-- 1. [조사 가이드] 페이지 (글씨 크기 확대 적용) -->
   <div id="pageGuide" style="display: none;">
     <div class="card guide-box">
       <div class="guide-title">📌 1. 조사 목적</div>
-      <p style="font-size: 0.86rem; color: #64748b; margin-bottom: 12px;">과학문화센터 일일 방문객 수 및 이용 행태를 파악·분석하여 향후 센터 공간 운영 및 서비스 개선에 활용하고자 함.</p>
+      <p class="guide-desc">과학문화센터 일일 방문객 수 및 이용 행태를 파악·분석하여 향후 센터 공간 운영 및 서비스 개선에 활용하고자 함.</p>
 
       <div class="guide-title">⏰ 2. 분석 시간 및 요일별 규칙</div>
       <div class="guide-rule">
@@ -138,14 +142,14 @@
       </div>
 
       <div class="guide-title">✍️ 3. 체크리스트 작성 요령</div>
-      <ul style="padding-left: 20px; font-size: 0.85rem; margin-top: 6px;">
+      <ul class="guide-list">
         <li>분석 장소를 돌아다니며 방문객 <strong>한 명 한 명에 대한 정보를 관찰하여 기록</strong></li>
         <li><strong>복수 행위:</strong> 한 번에 두 가지 행위 시 모두 중복 체크!</li>
         <li><strong>자리 비움:</strong> 잠시 자리를 비운 경우도 인원으로 체크!</li>
         <li><strong>비고란 표기:</strong> <span class="highlight-red">가족 단위, DVD 시청, 직원(3층만 해당)</span>의 경우 해당 사항이 있을 때 비고란에 표기.</li>
       </ul>
-      <div style="margin-top: 16px;">
-        <button class="btn-submit" style="background-color: #0284c7;" onclick="switchView('1F')">도서관(1F) 기록 시작하기 👉</button>
+      <div style="margin-top: 20px;">
+        <button class="btn-submit" style="background-color: #0284c7;" onclick="switchView('1F')">기록 시작하기 👉</button>
       </div>
     </div>
   </div>
@@ -436,7 +440,6 @@
     icon.innerText = isOpen ? '▼' : '▲';
   }
 
-  // 모든 칩을 선택 해제(회색조 기본값) 상태로 되돌리는 함수
   function resetForm() {
     document.querySelectorAll('.btn-chip').forEach(c => c.classList.remove('active'));
     document.getElementById('noteInput').value = '';
@@ -486,7 +489,7 @@
 
     renderAreas();
     renderActivities();
-    resetForm(); // 탭 이동 시에도 전부 회색조로 시작
+    resetForm();
     renderTable();
   }
 
@@ -605,7 +608,6 @@
       } else {
         recordData.createdAt = Date.now();
         await db.collection(collectionName).add(recordData);
-        // 하나 입력 완료 후 모든 선택 버튼을 회색조로 자동 리셋!
         resetForm();
       }
     } catch (err) {
