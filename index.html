@@ -4,7 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>과학문화센터 방문자 분석 체크기</title>
+  <!-- 엑셀 라이브러리 -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
   <style>
     :root {
       --primary-color: #be123c;
@@ -99,13 +104,14 @@
     .guide-title { font-weight: 700; font-size: 1rem; color: #0f172a; margin-top: 10px; margin-bottom: 4px; }
     .guide-rule { background: #f8fafc; border-left: 3px solid #0284c7; padding: 8px 12px; margin: 8px 0; font-size: 0.85rem; }
     .highlight-red { color: #dc2626; font-weight: 700; }
+    .status-sync { font-size: 0.75rem; color: #16a34a; font-weight: bold; margin-left: 6px; }
   </style>
 </head>
 <body class="theme-1f">
 
 <div class="container">
   <header>
-    <h1>방문자 현황 기록기</h1>
+    <h1>방문자 현황 기록기 <span class="status-sync">● 실시간 연동중</span></h1>
     <button class="btn-export" onclick="exportToExcel()">📊 전체 엑셀 저장</button>
   </header>
 
@@ -209,7 +215,7 @@
     <div class="card">
       <div class="list-header">
         <div class="section-title" id="currentListTitle" style="margin:0;">도서관(1F) 기록 목록</div>
-        <span class="count-badge" id="recordCount">총 0건</span>
+        <span class="count-badge" id="recordCount">로딩 중...</span>
       </div>
       <div class="record-table-wrapper">
         <table>
@@ -233,12 +239,26 @@
 </div>
 
 <script>
-  let currentView = '1F';
-  let editIndex = null;
+  // Firebase 초기화 (유저 발급 키 적용)
+  const firebaseConfig = {
+    apiKey: "AIzaSyCM1dGwhj8qn6FL8qgh31OlMv7Vl_HPSRI",
+    authDomain: "ibs-visitor.firebaseapp.com",
+    projectId: "ibs-visitor",
+    storageBucket: "ibs-visitor.firebasestorage.app",
+    messagingSenderId: "168288023555",
+    appId: "1:168288023555:web:ef6255073c5b2d2b168a36",
+    measurementId: "G-H5Z41WWPQZ"
+  };
 
-  // 1층 도서관 실제 사진 데이터 (61건 정확 반영)
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  let currentView = '1F';
+  let editingDocId = null;
+  let records1F = [];
+  let records3F = [];
+
   const initialData1F = [
-    // 9월 22일(화) 11:00 (7건)
     { date: "2026-09-22-화", time: "11:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "공부", note: "" },
     { date: "2026-09-22-화", time: "11:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
     { date: "2026-09-22-화", time: "11:00", area: "1구역", gender: "여", age: "청년(20~30대)", activity: "공부", note: "" },
@@ -246,7 +266,6 @@
     { date: "2026-09-22-화", time: "11:00", area: "3구역", gender: "여", age: "청년(20~30대)", activity: "휴식", note: "" },
     { date: "2026-09-22-화", time: "11:00", area: "3구역", gender: "남", age: "중장년(40~50대)", activity: "휴식", note: "" },
     { date: "2026-09-22-화", time: "11:00", area: "3구역", gender: "남", age: "중장년(40~50대)", activity: "독서", note: "" },
-    // 9월 22일(화) 15:00 (10건)
     { date: "2026-09-22-화", time: "15:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
     { date: "2026-09-22-화", time: "15:00", area: "1구역", gender: "여", age: "중장년(40~50대)", activity: "공부", note: "" },
     { date: "2026-09-22-화", time: "15:00", area: "1구역", gender: "여", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
@@ -257,14 +276,11 @@
     { date: "2026-09-22-화", time: "15:00", area: "3구역", gender: "남", age: "청년(20~30대)", activity: "휴식", note: "" },
     { date: "2026-09-22-화", time: "15:00", area: "3구역", gender: "여", age: "중장년(40~50대)", activity: "독서", note: "" },
     { date: "2026-09-22-화", time: "15:00", area: "3구역", gender: "남", age: "중장년(40~50대)", activity: "독서", note: "" },
-
-    // 9월 23일(수) 11:00 (5건)
     { date: "2026-09-23-수", time: "11:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "공부", note: "" },
     { date: "2026-09-23-수", time: "11:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "공부", note: "" },
     { date: "2026-09-23-수", time: "11:00", area: "2구역", gender: "남", age: "중장년(40~50대)", activity: "비치된 컴퓨터 사용", note: "" },
     { date: "2026-09-23-수", time: "11:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "비치된 컴퓨터 사용", note: "" },
     { date: "2026-09-23-수", time: "11:00", area: "3구역", gender: "남", age: "청년(20~30대)", activity: "독서", note: "" },
-    // 9월 23일(수) 15:00 (8건)
     { date: "2026-09-23-수", time: "15:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "공부", note: "" },
     { date: "2026-09-23-수", time: "15:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "공부, 개인PC 사용", note: "" },
     { date: "2026-09-23-수", time: "15:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "공부", note: "" },
@@ -273,8 +289,6 @@
     { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "남", age: "중장년(40~50대)", activity: "비치된 컴퓨터 사용", note: "" },
     { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "남", age: "청년(20~30대)", activity: "휴식", note: "" },
     { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "남", age: "청년(20~30대)", activity: "독서", note: "" },
-
-    // 9월 27일(일) 11:00 (13건)
     { date: "2026-09-27-일", time: "11:00", area: "1구역", gender: "여", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
     { date: "2026-09-27-일", time: "11:00", area: "1구역", gender: "여", age: "청년(20~30대)", activity: "서가 탐색, 휴식", note: "" },
     { date: "2026-09-27-일", time: "11:00", area: "1구역", gender: "여", age: "영유아/어린이", activity: "서가 탐색, 휴식", note: "" },
@@ -288,7 +302,6 @@
     { date: "2026-09-27-일", time: "11:00", area: "2구역", gender: "여", age: "중장년(40~50대)", activity: "휴식", note: "" },
     { date: "2026-09-27-일", time: "11:00", area: "2구역", gender: "남", age: "청소년", activity: "공부", note: "" },
     { date: "2026-09-27-일", time: "11:00", area: "3구역", gender: "여", age: "영유아/어린이", activity: "독서", note: "" },
-    // 9월 27일(일) 15:00 (18건)
     { date: "2026-09-27-일", time: "15:00", area: "1구역", gender: "여", age: "영유아/어린이", activity: "공부", note: "" },
     { date: "2026-09-27-일", time: "15:00", area: "1구역", gender: "여", age: "청년(20~30대)", activity: "독서", note: "" },
     { date: "2026-09-27-일", time: "15:00", area: "1구역", gender: "여", age: "중장년(40~50대)", activity: "개인PC 사용", note: "" },
@@ -309,14 +322,11 @@
     { date: "2026-09-27-일", time: "15:00", area: "3구역", gender: "남", age: "청소년", activity: "독서", note: "" }
   ];
 
-  // 3층 라운지 실제 사진 데이터 (31건 정확 반영)
   const initialData3F = [
-    // 9월 22일(화) 11:00 (4건)
     { date: "2026-09-22-화", time: "11:00", area: "2구역", gender: "남", age: "중장년(40~50대)", activity: "개인PC 사용", note: "" },
     { date: "2026-09-22-화", time: "11:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
     { date: "2026-09-22-화", time: "11:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "개인PC 사용, 독서", note: "" },
     { date: "2026-09-22-화", time: "11:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
-    // 9월 22일(화) 15:00 (11건)
     { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "남", age: "시니어(60대 이상)", activity: "개인PC 사용", note: "" },
     { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "독서, 공부", note: "" },
     { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
@@ -328,12 +338,9 @@
     { date: "2026-09-22-화", time: "15:00", area: "3구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
     { date: "2026-09-22-화", time: "15:00", area: "3구역", gender: "여", age: "중장년(40~50대)", activity: "독서", note: "빈백 활용" },
     { date: "2026-09-22-화", time: "15:00", area: "4구역", gender: "남", age: "중장년(40~50대)", activity: "공부, 개인PC 사용", note: "" },
-
-    // 9월 23일(수) 11:00 (3건)
     { date: "2026-09-23-수", time: "11:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "공부", note: "" },
     { date: "2026-09-23-수", time: "11:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
     { date: "2026-09-23-수", time: "11:00", area: "2구역", gender: "남", age: "중장년(40~50대)", activity: "독서, 공부, 개인PC 사용", note: "" },
-    // 9월 23일(수) 15:00 (13건)
     { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
     { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "휴식", note: "직원" },
     { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "공부, 개인PC 사용", note: "" },
@@ -348,19 +355,6 @@
     { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "여", age: "중장년(40~50대)", activity: "독서", note: "" },
     { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "남", age: "중장년(40~50대)", activity: "개인PC 사용", note: "" }
   ];
-
-  // 버전 키를 갱신하여 캡처본 실데이터와 100% 강제 동기화
-  const CURRENT_DATA_VERSION = 'v8_exact_image_sync';
-  if (localStorage.getItem('visitor_data_version') !== CURRENT_DATA_VERSION) {
-    localStorage.setItem('visitor_records_1F', JSON.stringify(initialData1F));
-    localStorage.setItem('visitor_records_3F', JSON.stringify(initialData3F));
-    localStorage.setItem('visitor_data_version', CURRENT_DATA_VERSION);
-  }
-
-  let dataStore = {
-    '1F': JSON.parse(localStorage.getItem('visitor_records_1F')),
-    '3F': JSON.parse(localStorage.getItem('visitor_records_3F'))
-  };
 
   const floorImages = {
     '1F': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%"><rect width="500" height="500" fill="%23ffffff"/><path d="M 0,0 L 210,0 A 210,210 0 0,1 0,210 Z" fill="%23dfb6ac"/><text x="105" y="70" font-family="sans-serif" font-weight="bold" font-size="28" text-anchor="middle" fill="%23000000">1구역</text><text x="105" y="105" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="%23000000">큰 테이블 + 창가 좌석</text><text x="105" y="130" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="%23000000">+ 원형 탁자/의자</text><path d="M 500,0 L 290,0 A 210,210 0 0,0 500,210 Z" fill="%23dfb6ac"/><text x="395" y="70" font-family="sans-serif" font-weight="bold" font-size="28" text-anchor="middle" fill="%23000000">2구역</text><text x="395" y="105" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="%23000000">PC + 좌식</text><path d="M 500,500 L 290,500 A 210,210 0 0,1 500,290 Z" fill="%23dfb6ac"/><text x="400" y="415" font-family="sans-serif" font-weight="bold" font-size="28" text-anchor="middle" fill="%23000000">3구역</text><text x="400" y="445" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="%23000000">어린이 서가 + 소파</text><rect x="0" y="275" width="45" height="110" fill="%23f9e9e5"/><text x="22" y="310" font-family="sans-serif" font-weight="bold" font-size="20" text-anchor="middle" fill="%23000000">출</text><text x="22" y="340" font-family="sans-serif" font-weight="bold" font-size="20" text-anchor="middle" fill="%23000000">입</text><text x="22" y="370" font-family="sans-serif" font-weight="bold" font-size="20" text-anchor="middle" fill="%23000000">구</text><rect x="0" y="435" width="225" height="65" fill="%23f9e9e5"/><text x="112" y="478" font-family="sans-serif" font-weight="bold" font-size="22" text-anchor="middle" fill="%23000000">데 스 크</text></svg>',
@@ -377,12 +371,52 @@
     '3F': ['1구역', '2구역', '3구역', '4구역']
   };
 
-  window.onload = function() {
+  window.onload = async function() {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('dateInput').value = today;
     updateDatePreview();
     switchView('1F');
+
+    // DB 최초 1회 초기 데이터 심기 검사 및 실시간 구독 시작
+    await checkAndSeedDatabase();
+    listenToFirebase();
   };
+
+  // Firebase에 기존 데이터(61건+31건)가 없으면 자동으로 올려주는 함수
+  async function checkAndSeedDatabase() {
+    const snap1F = await db.collection('records_1F').limit(1).get();
+    if (snap1F.empty) {
+      const batch = db.batch();
+      initialData1F.forEach((item, idx) => {
+        const ref = db.collection('records_1F').doc();
+        batch.set(ref, { ...item, createdAt: 1000 + idx });
+      });
+      await batch.commit();
+    }
+
+    const snap3F = await db.collection('records_3F').limit(1).get();
+    if (snap3F.empty) {
+      const batch = db.batch();
+      initialData3F.forEach((item, idx) => {
+        const ref = db.collection('records_3F').doc();
+        batch.set(ref, { ...item, createdAt: 1000 + idx });
+      });
+      await batch.commit();
+    }
+  }
+
+  // 실시간 동기화 리스너 (누가 추가/삭제하면 모든 기기 화면이 즉시 갱신됨)
+  function listenToFirebase() {
+    db.collection('records_1F').orderBy('createdAt', 'asc').onSnapshot(snapshot => {
+      records1F = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      if (currentView === '1F') renderTable();
+    });
+
+    db.collection('records_3F').orderBy('createdAt', 'asc').onSnapshot(snapshot => {
+      records3F = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      if (currentView === '3F') renderTable();
+    });
+  }
 
   function getDayName(dateStr) {
     const days = ['일', '월', '화', '수', '목', '금', '토'];
@@ -406,7 +440,7 @@
   }
 
   function switchView(view) {
-    if (editIndex !== null) cancelEdit();
+    if (editingDocId !== null) cancelEdit();
 
     currentView = view;
     const body = document.body;
@@ -506,7 +540,7 @@
     });
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const rawDate = document.getElementById('dateInput').value;
     if (!rawDate) return alert('날짜를 입력해 주세요.');
     const dateFormatted = `${rawDate}-${getDayName(rawDate)}`;
@@ -531,6 +565,7 @@
       }
     });
 
+    const collectionName = currentView === '1F' ? 'records_1F' : 'records_3F';
     const recordData = {
       date: dateFormatted,
       time: time,
@@ -541,23 +576,36 @@
       note: note
     };
 
-    if (editIndex !== null) {
-      dataStore[currentView][editIndex] = recordData;
-      alert('기록이 성공적으로 수정되었습니다.');
-      cancelEdit();
-    } else {
-      dataStore[currentView].push(recordData);
-      document.getElementById('noteInput').value = '';
-      document.getElementById('etcInput').value = '';
-    }
+    const submitBtn = document.getElementById('btnSubmit');
+    submitBtn.disabled = true;
+    submitBtn.innerText = '저장 중...';
 
-    localStorage.setItem(`visitor_records_${currentView}`, JSON.stringify(dataStore[currentView]));
-    renderTable();
+    try {
+      if (editingDocId !== null) {
+        await db.collection(collectionName).doc(editingDocId).update(recordData);
+        alert('기록이 수정되었습니다.');
+        cancelEdit();
+      } else {
+        recordData.createdAt = Date.now();
+        await db.collection(collectionName).add(recordData);
+        document.getElementById('noteInput').value = '';
+        document.getElementById('etcInput').value = '';
+      }
+    } catch (err) {
+      alert('저장 실패: ' + err.message);
+    } finally {
+      submitBtn.disabled = false;
+      if (editingDocId === null) {
+        submitBtn.innerText = '+ 이 방문자 기록 추가';
+      }
+    }
   }
 
-  function startEdit(index) {
-    editIndex = index;
-    const item = dataStore[currentView][index];
+  function startEdit(docId) {
+    editingDocId = docId;
+    const currentList = currentView === '1F' ? records1F : records3F;
+    const item = currentList.find(r => r.id === docId);
+    if (!item) return;
 
     const rawDate = item.date.slice(0, 10);
     document.getElementById('dateInput').value = rawDate;
@@ -606,7 +654,7 @@
   }
 
   function cancelEdit() {
-    editIndex = null;
+    editingDocId = null;
     const submitBtn = document.getElementById('btnSubmit');
     submitBtn.innerText = '+ 이 방문자 기록 추가';
     submitBtn.style.backgroundColor = '';
@@ -619,24 +667,23 @@
     renderTable();
   }
 
-  function deleteRecord(index) {
-    if (editIndex !== null && editIndex === index) {
-      cancelEdit();
-    }
-    const target = dataStore[currentView][index];
+  async function deleteRecord(docId) {
+    if (editingDocId === docId) cancelEdit();
+    const currentList = currentView === '1F' ? records1F : records3F;
+    const target = currentList.find(r => r.id === docId);
+    if (!target) return;
+
     const confirmMsg = `[${target.time} / ${target.area} / ${target.gender} / ${target.age}]\n이 기록을 삭제하시겠습니까?`;
-    
     if (confirm(confirmMsg)) {
-      dataStore[currentView].splice(index, 1);
-      localStorage.setItem(`visitor_records_${currentView}`, JSON.stringify(dataStore[currentView]));
-      renderTable();
+      const collectionName = currentView === '1F' ? 'records_1F' : 'records_3F';
+      await db.collection(collectionName).doc(docId).delete();
     }
   }
 
   function renderTable() {
     const tbody = document.getElementById('tableBody');
     tbody.innerHTML = '';
-    const currentList = dataStore[currentView];
+    const currentList = currentView === '1F' ? records1F : records3F;
     document.getElementById('recordCount').innerText = `총 ${currentList.length}건`;
 
     currentList.forEach((r, idx) => {
@@ -644,7 +691,7 @@
       if (idx === 0 || currentList[idx - 1].date !== r.date) {
         tr.classList.add('date-start');
       }
-      if (editIndex === idx) {
+      if (editingDocId === r.id) {
         tr.classList.add('editing-row');
       }
 
@@ -658,8 +705,8 @@
         <td>${r.note || '-'}</td>
         <td style="text-align: center;">
           <div class="action-btns">
-            <button class="btn-edit" onclick="startEdit(${idx})">수정</button>
-            <button class="btn-del" onclick="deleteRecord(${idx})">삭제</button>
+            <button class="btn-edit" onclick="startEdit('${r.id}')">수정</button>
+            <button class="btn-del" onclick="deleteRecord('${r.id}')">삭제</button>
           </div>
         </td>
       `;
@@ -668,10 +715,7 @@
   }
 
   function exportToExcel() {
-    const list1F = dataStore['1F'];
-    const list3F = dataStore['3F'];
-
-    if (list1F.length === 0 && list3F.length === 0) {
+    if (records1F.length === 0 && records3F.length === 0) {
       return alert('다운로드할 데이터가 없습니다.');
     }
 
@@ -687,12 +731,12 @@
       '비고': r.note
     }));
 
-    if (list1F.length > 0) {
-      const ws1 = XLSX.utils.json_to_sheet(formatData(list1F));
+    if (records1F.length > 0) {
+      const ws1 = XLSX.utils.json_to_sheet(formatData(records1F));
       XLSX.utils.book_append_sheet(wb, ws1, "도서관_1F");
     }
-    if (list3F.length > 0) {
-      const ws3 = XLSX.utils.json_to_sheet(formatData(list3F));
+    if (records3F.length > 0) {
+      const ws3 = XLSX.utils.json_to_sheet(formatData(records3F));
       XLSX.utils.book_append_sheet(wb, ws3, "라운지_3F");
     }
 
