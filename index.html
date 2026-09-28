@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>과학문화센터 방문자 분석 체크기</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --primary-color: #be123c;
+      --primary-hover: #9f1239;
+      --primary-light: #fff1f2;
+      --primary-border: #f43f5e;
+      --bg-color: #fff5f5;
+    }
+
+    body.theme-guide {
+      --primary-color: #0284c7;
+      --primary-hover: #0369a1;
+      --primary-light: #f0f9ff;
+      --primary-border: #38bdf8;
+      --bg-color: #f8fafc;
+    }
+
+    body.theme-1f {
+      --primary-color: #be123c;
+      --primary-hover: #9f1239;
+      --primary-light: #fff1f2;
+      --primary-border: #f43f5e;
+      --bg-color: #fff5f5;
+    }
+
+    body.theme-3f {
+      --primary-color: #475569;
+      --primary-hover: #334155;
+      --primary-light: #f8fafc;
+      --primary-border: #64748b;
+      --bg-color: #f1f5f9;
+    }
+
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", sans-serif; margin: 0; padding: 0; }
+    body { background-color: var(--bg-color); color: #1e293b; padding: 14px; padding-bottom: 80px; transition: background-color 0.25s; }
+    .container { max-width: 620px; margin: 0 auto; }
+    
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    h1 { font-size: 1.15rem; font-weight: 700; color: #0f172a; }
+    .btn-export { background-color: #107c41; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    
+    .tab-bar { display: flex; background-color: #e2e8f0; border-radius: 10px; padding: 4px; margin-bottom: 14px; gap: 4px; }
+    .tab-btn { flex: 1; text-align: center; padding: 10px 0; font-weight: 700; font-size: 0.88rem; border-radius: 8px; cursor: pointer; color: #64748b; transition: all 0.2s; }
+    .tab-btn.active-guide { background-color: #ffffff; color: #0284c7; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
+    .tab-btn.active-1f { background-color: #ffffff; color: #be123c; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
+    .tab-btn.active-3f { background-color: #ffffff; color: #475569; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
+
+    .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .section-title { font-size: 0.82rem; font-weight: 700; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .map-box { background: #ffffff; border: 1.5px solid var(--primary-border); border-radius: 12px; padding: 12px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .map-header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.88rem; color: var(--primary-color); cursor: pointer; }
+    .map-content { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0; text-align: center; }
+    .map-img { width: 100%; max-width: 420px; height: auto; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+
+    .grid-options { display: grid; gap: 8px; }
+    .grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    
+    .btn-chip { background-color: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 4px; font-size: 0.88rem; font-weight: 600; color: #334155; text-align: center; cursor: pointer; transition: all 0.15s; }
+    .btn-chip.active { background-color: var(--primary-color); border-color: var(--primary-border); color: white; }
+    
+    .date-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .date-input { flex: 1; padding: 8px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.92rem; font-weight: 600; color: #1e293b; outline: none; }
+    .date-preview { font-size: 0.85rem; font-weight: 700; color: var(--primary-color); white-space: nowrap; }
+
+    .input-text { width: 100%; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+    .input-text:focus { border-color: var(--primary-color); }
+    .etc-wrapper { display: none; margin-top: 8px; }
+    
+    .btn-submit-container { display: flex; gap: 8px; }
+    .btn-submit { flex: 1; background-color: var(--primary-color); color: white; border: none; padding: 14px; border-radius: 10px; font-size: 1.05rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15); transition: background-color 0.2s; }
+    .btn-submit:active { background-color: var(--primary-hover); }
+    .btn-cancel { display: none; background-color: #94a3b8; color: white; border: none; padding: 14px 18px; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; }
+    
+    .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .count-badge { background-color: #e2e8f0; color: #475569; font-size: 0.78rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+    
+    .record-table-wrapper { overflow-x: auto; max-height: 380px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: left; }
+    th { background: #f8fafc; color: #64748b; font-weight: 600; padding: 8px 6px; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; }
+    td { padding: 8px 6px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: middle; }
+    tr.date-start td { border-top: 2px solid var(--primary-color); font-weight: 600; background-color: var(--primary-light); }
+    tr.editing-row td { background-color: #fef08a !important; }
+    
+    .action-btns { display: flex; gap: 4px; justify-content: center; }
+    .btn-edit { background-color: #e0f2fe; border: 1px solid #7dd3fc; color: #0284c7; font-weight: 700; font-size: 0.75rem; border-radius: 6px; padding: 4px 7px; cursor: pointer; white-space: nowrap; }
+    .btn-del { background-color: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; font-weight: 700; font-size: 0.75rem; border-radius: 6px; padding: 4px 7px; cursor: pointer; white-space: nowrap; }
+
+    .guide-box { line-height: 1.6; font-size: 0.9rem; color: #334155; }
+    .guide-title { font-weight: 700; font-size: 1rem; color: #0f172a; margin-top: 10px; margin-bottom: 4px; }
+    .guide-rule { background: #f8fafc; border-left: 3px solid #0284c7; padding: 8px 12px; margin: 8px 0; font-size: 0.85rem; }
+    .highlight-red { color: #dc2626; font-weight: 700; }
+  </style>
+</head>
+<body class="theme-1f">
+
+<div class="container">
+  <header>
+    <h1>방문자 현황 기록기</h1>
+    <button class="btn-export" onclick="exportToExcel()">📊 전체 엑셀 저장</button>
+  </header>
+
+  <!-- 상단 네비게이션 탭 -->
+  <div class="tab-bar">
+    <div class="tab-btn" id="tabGuide" onclick="switchView('GUIDE')">📖 조사 가이드</div>
+    <div class="tab-btn active-1f" id="tab1F" onclick="switchView('1F')">📚 도서관(1F)</div>
+    <div class="tab-btn" id="tab3F" onclick="switchView('3F')">☕ 라운지(3F)</div>
+  </div>
+
+  <!-- 1. [조사 가이드] 페이지 -->
+  <div id="pageGuide" style="display: none;">
+    <div class="card guide-box">
+      <div class="guide-title">📌 1. 조사 목적</div>
+      <p style="font-size: 0.86rem; color: #64748b; margin-bottom: 12px;">과학문화센터 일일 방문객 수 및 이용 행태를 파악·분석하여 향후 센터 공간 운영 및 서비스 개선에 활용하고자 함.[cite: 1]</p>
+
+      <div class="guide-title">⏰ 2. 분석 시간 및 요일별 규칙</div>
+      <div class="guide-rule">
+        <strong>조사 시간:</strong> 하루 2회 (오전 11:00 / 오후 15:00)[cite: 1]<br>
+        <strong>⚠️ 요일별 체크 대상:</strong><br>
+        • <strong>화 ~ 금:</strong> 도서관(1F) & 라운지(3F) 모두 실시[cite: 1]<br>
+        • <strong>토 · 일요일:</strong> <span style="color:#be123c; font-weight:700;">과학도서관(1F)만</span> 체크 (라운지 X)[cite: 1]<br>
+        • <strong>월요일:</strong> <span style="color:#475569; font-weight:700;">라운지(3F)만</span> 체크 (도서관 휴관)[cite: 1]
+      </div>
+
+      <div class="guide-title">✍️ 3. 체크리스트 작성 요령</div>
+      <ul style="padding-left: 20px; font-size: 0.85rem; margin-top: 6px;">
+        <li>분석 장소를 돌아다니며 방문객 <strong>한 명 한 명에 대한 정보를 관찰하여 기록</strong>[cite: 1]</li>
+        <li><strong>복수 행위:</strong> 한 번에 두 가지 행위 시 모두 중복 체크![cite: 1]</li>
+        <li><strong>자리 비움:</strong> 잠시 자리를 비운 경우도 인원으로 체크![cite: 1]</li>
+        <li><strong>비고란 표기:</strong> <span class="highlight-red">가족 단위, DVD 시청, 직원(3층만 해당)</span>의 경우 해당 사항이 있을 때 비고란에 표기.[cite: 1]</li>
+      </ul>
+      <div style="margin-top: 16px;">
+        <button class="btn-submit" style="background-color: #0284c7;" onclick="switchView('1F')">도서관(1F) 기록 시작하기 👉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. [체크리스트 입력] 페이지 -->
+  <div id="pageRecord">
+    <div class="map-box">
+      <div class="map-header" onclick="toggleMap()">
+        <span id="mapTitle">🗺️ 도서관(1F) 평면도 보기 (클릭하여 열기)</span>
+        <span id="mapToggleIcon">▼</span>
+      </div>
+      <div class="map-content" id="mapContent">
+        <img id="mapImage" class="map-img" src="" alt="평면도">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="date-row">
+        <span class="section-title" style="margin:0;">날짜:</span>
+        <input type="date" id="dateInput" class="date-input" onchange="updateDatePreview()">
+        <span id="datePreview" class="date-preview"></span>
+      </div>
+
+      <div class="section-title">조사 시간</div>
+      <div class="grid-options grid-2" id="timeGroup" style="margin-bottom: 14px;">
+        <div class="btn-chip active" onclick="selectSingle(this)">11:00</div>
+        <div class="btn-chip" onclick="selectSingle(this)">15:00</div>
+      </div>
+
+      <div class="section-title" id="areaSectionTitle">구역</div>
+      <div class="grid-options" id="areaGroup" style="margin-bottom: 14px;"></div>
+
+      <div class="section-title">성별</div>
+      <div class="grid-options grid-2" id="genderGroup" style="margin-bottom: 14px;">
+        <div class="btn-chip active" onclick="selectSingle(this)">남</div>
+        <div class="btn-chip" onclick="selectSingle(this)">여</div>
+      </div>
+
+      <div class="section-title">연령대</div>
+      <div class="grid-options grid-3" id="ageGroup" style="margin-bottom: 14px;">
+        <div class="btn-chip active" onclick="selectSingle(this)">영유아/어린이</div>
+        <div class="btn-chip" onclick="selectSingle(this)">청소년</div>
+        <div class="btn-chip" onclick="selectSingle(this)">청년(20~30대)</div>
+        <div class="btn-chip" onclick="selectSingle(this)">중장년(40~50대)</div>
+        <div class="btn-chip" onclick="selectSingle(this)">시니어(60대 이상)</div>
+      </div>
+
+      <div class="section-title">주요 활동 (복수 선택 가능)</div>
+      <div class="grid-options grid-3" id="activityGroup" style="margin-bottom: 8px;"></div>
+      
+      <div id="etcWrapper" class="etc-wrapper" style="margin-bottom: 14px;">
+        <input type="text" id="etcInput" class="input-text" placeholder="기타 행위 내용을 직접 적어주세요">
+      </div>
+
+      <div class="section-title" style="margin-top: 10px;">비고 (예. 빈백 활용, DVD 시청, 가족, 직원 등)</div>
+      <div style="margin-bottom: 16px;">
+        <input type="text" id="noteInput" class="input-text" placeholder="특이사항이나 메모를 자유롭게 입력하세요">
+      </div>
+
+      <div class="btn-submit-container">
+        <button class="btn-submit" id="btnSubmit" onclick="handleSubmit()">+ 이 방문자 기록 추가</button>
+        <button class="btn-cancel" id="btnCancel" onclick="cancelEdit()">취소</button>
+      </div>
+    </div>
+
+    <!-- 실시간 기록 리스트 -->
+    <div class="card">
+      <div class="list-header">
+        <div class="section-title" id="currentListTitle" style="margin:0;">도서관(1F) 기록 목록</div>
+        <span class="count-badge" id="recordCount">총 0건</span>
+      </div>
+      <div class="record-table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>날짜</th>
+              <th>시간</th>
+              <th>구역</th>
+              <th>성별</th>
+              <th>연령대</th>
+              <th>활동</th>
+              <th>비고</th>
+              <th style="text-align: center; min-width: 90px;">관리</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentView = '1F';
+  let editIndex = null;
+
+  // 1층 도서관 실제 사진 데이터 (61건 정확 반영)
+  const initialData1F = [
+    // 9월 22일(화) 11:00 (7건)
+    { date: "2026-09-22-화", time: "11:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "공부", note: "" },
+    { date: "2026-09-22-화", time: "11:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-22-화", time: "11:00", area: "1구역", gender: "여", age: "청년(20~30대)", activity: "공부", note: "" },
+    { date: "2026-09-22-화", time: "11:00", area: "2구역", gender: "남", age: "시니어(60대 이상)", activity: "독서", note: "" },
+    { date: "2026-09-22-화", time: "11:00", area: "3구역", gender: "여", age: "청년(20~30대)", activity: "휴식", note: "" },
+    { date: "2026-09-22-화", time: "11:00", area: "3구역", gender: "남", age: "중장년(40~50대)", activity: "휴식", note: "" },
+    { date: "2026-09-22-화", time: "11:00", area: "3구역", gender: "남", age: "중장년(40~50대)", activity: "독서", note: "" },
+    // 9월 22일(화) 15:00 (10건)
+    { date: "2026-09-22-화", time: "15:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "1구역", gender: "여", age: "중장년(40~50대)", activity: "공부", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "1구역", gender: "여", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "1구역", gender: "남", age: "중장년(40~50대)", activity: "독서", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "공부", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "1구역", gender: "여", age: "청년(20~30대)", activity: "독서", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "남", age: "시니어(60대 이상)", activity: "비치된 컴퓨터 사용", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "3구역", gender: "남", age: "청년(20~30대)", activity: "휴식", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "3구역", gender: "여", age: "중장년(40~50대)", activity: "독서", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "3구역", gender: "남", age: "중장년(40~50대)", activity: "독서", note: "" },
+
+    // 9월 23일(수) 11:00 (5건)
+    { date: "2026-09-23-수", time: "11:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "공부", note: "" },
+    { date: "2026-09-23-수", time: "11:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "공부", note: "" },
+    { date: "2026-09-23-수", time: "11:00", area: "2구역", gender: "남", age: "중장년(40~50대)", activity: "비치된 컴퓨터 사용", note: "" },
+    { date: "2026-09-23-수", time: "11:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "비치된 컴퓨터 사용", note: "" },
+    { date: "2026-09-23-수", time: "11:00", area: "3구역", gender: "남", age: "청년(20~30대)", activity: "독서", note: "" },
+    // 9월 23일(수) 15:00 (8건)
+    { date: "2026-09-23-수", time: "15:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "공부", note: "" },
+    { date: "2026-09-23-수", time: "15:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "공부, 개인PC 사용", note: "" },
+    { date: "2026-09-23-수", time: "15:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "공부", note: "" },
+    { date: "2026-09-23-수", time: "15:00", area: "1구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-23-수", time: "15:00", area: "1구역", gender: "남", age: "시니어(60대 이상)", activity: "독서", note: "" },
+    { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "남", age: "중장년(40~50대)", activity: "비치된 컴퓨터 사용", note: "" },
+    { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "남", age: "청년(20~30대)", activity: "휴식", note: "" },
+    { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "남", age: "청년(20~30대)", activity: "독서", note: "" },
+
+    // 9월 27일(일) 11:00 (13건)
+    { date: "2026-09-27-일", time: "11:00", area: "1구역", gender: "여", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-27-일", time: "11:00", area: "1구역", gender: "여", age: "청년(20~30대)", activity: "서가 탐색, 휴식", note: "" },
+    { date: "2026-09-27-일", time: "11:00", area: "1구역", gender: "여", age: "영유아/어린이", activity: "서가 탐색, 휴식", note: "" },
+    { date: "2026-09-27-일", time: "11:00", area: "1구역", gender: "남", age: "시니어(60대 이상)", activity: "공부, 개인PC 사용", note: "" },
+    { date: "2026-09-27-일", time: "11:00", area: "1구역", gender: "남", age: "영유아/어린이", activity: "공부", note: "" },
+    { date: "2026-09-27-일", time: "11:00", area: "1구역", gender: "남", age: "영유아/어린이", activity: "공부", note: "" },
+    { date: "2026-09-27-일", time: "11:00", area: "1구역", gender: "남", age: "중장년(40~50대)", activity: "독서", note: "" },
+    { date: "2026-09-27-일", time: "11:00", area: "1구역", gender: "남", age: "청소년", activity: "휴식", note: "" },
+    { date: "2026-09-27-일", time: "11:00", area: "1구역", gender: "남", age: "중장년(40~50대)", activity: "서가 탐색", note: "" },
+    { date: "2026-09-27-일", time: "11:00", area: "2구역", gender: "남", age: "중장년(40~50대)", activity: "공부, 비치된 컴퓨터 사용", note: "" },
+    { date: "2026-09-27-일", time: "11:00", area: "2구역", gender: "여", age: "중장년(40~50대)", activity: "휴식", note: "" },
+    { date: "2026-09-27-일", time: "11:00", area: "2구역", gender: "남", age: "청소년", activity: "공부", note: "" },
+    { date: "2026-09-27-일", time: "11:00", area: "3구역", gender: "여", age: "영유아/어린이", activity: "독서", note: "" },
+    // 9월 27일(일) 15:00 (18건)
+    { date: "2026-09-27-일", time: "15:00", area: "1구역", gender: "여", age: "영유아/어린이", activity: "공부", note: "" },
+    { date: "2026-09-27-일", time: "15:00", area: "1구역", gender: "여", age: "청년(20~30대)", activity: "독서", note: "" },
+    { date: "2026-09-27-일", time: "15:00", area: "1구역", gender: "여", age: "중장년(40~50대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-27-일", time: "15:00", area: "1구역", gender: "여", age: "영유아/어린이", activity: "공부", note: "" },
+    { date: "2026-09-27-일", time: "15:00", area: "1구역", gender: "여", age: "중장년(40~50대)", activity: "독서", note: "" },
+    { date: "2026-09-27-일", time: "15:00", area: "1구역", gender: "남", age: "중장년(40~50대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-27-일", time: "15:00", area: "1구역", gender: "남", age: "중장년(40~50대)", activity: "공부", note: "" },
+    { date: "2026-09-27-일", time: "15:00", area: "1구역", gender: "여", age: "중장년(40~50대)", activity: "공부", note: "" },
+    { date: "2026-09-27-일", time: "15:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-27-일", time: "15:00", area: "2구역", gender: "남", age: "영유아/어린이", activity: "독서", note: "" },
+    { date: "2026-09-27-일", time: "15:00", area: "3구역", gender: "여", age: "중장년(40~50대)", activity: "독서", note: "" },
+    { date: "2026-09-27-일", time: "15:00", area: "3구역", gender: "남", age: "중장년(40~50대)", activity: "독서", note: "" },
+    { date: "2026-09-27-일", time: "15:00", area: "3구역", gender: "여", age: "영유아/어린이", activity: "휴식", note: "가족" },
+    { date: "2026-09-27-일", time: "15:00", area: "3구역", gender: "남", age: "중장년(40~50대)", activity: "독서", note: "가족" },
+    { date: "2026-09-27-일", time: "15:00", area: "3구역", gender: "여", age: "중장년(40~50대)", activity: "독서", note: "가족" },
+    { date: "2026-09-27-일", time: "15:00", area: "3구역", gender: "여", age: "중장년(40~50대)", activity: "휴식", note: "" },
+    { date: "2026-09-27-일", time: "15:00", area: "3구역", gender: "남", age: "영유아/어린이", activity: "독서", note: "" },
+    { date: "2026-09-27-일", time: "15:00", area: "3구역", gender: "남", age: "청소년", activity: "독서", note: "" }
+  ];
+
+  // 3층 라운지 실제 사진 데이터 (31건 정확 반영)
+  const initialData3F = [
+    // 9월 22일(화) 11:00 (4건)
+    { date: "2026-09-22-화", time: "11:00", area: "2구역", gender: "남", age: "중장년(40~50대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-22-화", time: "11:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-22-화", time: "11:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "개인PC 사용, 독서", note: "" },
+    { date: "2026-09-22-화", time: "11:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
+    // 9월 22일(화) 15:00 (11건)
+    { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "남", age: "시니어(60대 이상)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "독서, 공부", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "독서, 개인PC 사용", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "공부", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "남", age: "중장년(40~50대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "공부", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "3구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-22-화", time: "15:00", area: "3구역", gender: "여", age: "중장년(40~50대)", activity: "독서", note: "빈백 활용" },
+    { date: "2026-09-22-화", time: "15:00", area: "4구역", gender: "남", age: "중장년(40~50대)", activity: "공부, 개인PC 사용", note: "" },
+
+    // 9월 23일(수) 11:00 (3건)
+    { date: "2026-09-23-수", time: "11:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "공부", note: "" },
+    { date: "2026-09-23-수", time: "11:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-23-수", time: "11:00", area: "2구역", gender: "남", age: "중장년(40~50대)", activity: "독서, 공부, 개인PC 사용", note: "" },
+    // 9월 23일(수) 15:00 (13건)
+    { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "휴식", note: "직원" },
+    { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "공부, 개인PC 사용", note: "" },
+    { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "여", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "남", age: "청년(20~30대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "남", age: "중장년(40~50대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-23-수", time: "15:00", area: "2구역", gender: "남", age: "중장년(40~50대)", activity: "개인PC 사용", note: "" },
+    { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "남", age: "시니어(60대 이상)", activity: "독서", note: "" },
+    { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "남", age: "청년(20~30대)", activity: "휴식", note: "빈백 활용, 직원" },
+    { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "남", age: "중장년(40~50대)", activity: "휴식", note: "빈백 활용, 직원" },
+    { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "여", age: "청년(20~30대)", activity: "휴식", note: "" },
+    { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "여", age: "중장년(40~50대)", activity: "독서", note: "" },
+    { date: "2026-09-23-수", time: "15:00", area: "3구역", gender: "남", age: "중장년(40~50대)", activity: "개인PC 사용", note: "" }
+  ];
+
+  // 버전 키를 갱신하여 캡처본 실데이터와 100% 강제 동기화
+  const CURRENT_DATA_VERSION = 'v8_exact_image_sync';
+  if (localStorage.getItem('visitor_data_version') !== CURRENT_DATA_VERSION) {
+    localStorage.setItem('visitor_records_1F', JSON.stringify(initialData1F));
+    localStorage.setItem('visitor_records_3F', JSON.stringify(initialData3F));
+    localStorage.setItem('visitor_data_version', CURRENT_DATA_VERSION);
+  }
+
+  let dataStore = {
+    '1F': JSON.parse(localStorage.getItem('visitor_records_1F')),
+    '3F': JSON.parse(localStorage.getItem('visitor_records_3F'))
+  };
+
+  const floorImages = {
+    '1F': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%"><rect width="500" height="500" fill="%23ffffff"/><path d="M 0,0 L 210,0 A 210,210 0 0,1 0,210 Z" fill="%23dfb6ac"/><text x="105" y="70" font-family="sans-serif" font-weight="bold" font-size="28" text-anchor="middle" fill="%23000000">1구역</text><text x="105" y="105" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="%23000000">큰 테이블 + 창가 좌석</text><text x="105" y="130" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="%23000000">+ 원형 탁자/의자</text><path d="M 500,0 L 290,0 A 210,210 0 0,0 500,210 Z" fill="%23dfb6ac"/><text x="395" y="70" font-family="sans-serif" font-weight="bold" font-size="28" text-anchor="middle" fill="%23000000">2구역</text><text x="395" y="105" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="%23000000">PC + 좌식</text><path d="M 500,500 L 290,500 A 210,210 0 0,1 500,290 Z" fill="%23dfb6ac"/><text x="400" y="415" font-family="sans-serif" font-weight="bold" font-size="28" text-anchor="middle" fill="%23000000">3구역</text><text x="400" y="445" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="%23000000">어린이 서가 + 소파</text><rect x="0" y="275" width="45" height="110" fill="%23f9e9e5"/><text x="22" y="310" font-family="sans-serif" font-weight="bold" font-size="20" text-anchor="middle" fill="%23000000">출</text><text x="22" y="340" font-family="sans-serif" font-weight="bold" font-size="20" text-anchor="middle" fill="%23000000">입</text><text x="22" y="370" font-family="sans-serif" font-weight="bold" font-size="20" text-anchor="middle" fill="%23000000">구</text><rect x="0" y="435" width="225" height="65" fill="%23f9e9e5"/><text x="112" y="478" font-family="sans-serif" font-weight="bold" font-size="22" text-anchor="middle" fill="%23000000">데 스 크</text></svg>',
+    '3F': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%"><rect width="500" height="500" fill="%23ffffff"/><rect x="25" y="0" width="110" height="500" fill="%23c4c4c4"/><text x="10" y="210" font-family="sans-serif" font-weight="bold" font-size="18" fill="%23000000">창</text><text x="10" y="245" font-family="sans-serif" font-weight="bold" font-size="18" fill="%23000000">가</text><text x="80" y="200" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">3구역</text><text x="80" y="235" font-family="sans-serif" font-weight="bold" font-size="14" text-anchor="middle" fill="%23000000">빈백 좌석</text><text x="80" y="255" font-family="sans-serif" font-weight="bold" font-size="14" text-anchor="middle" fill="%23000000">+ 나머지</text><text x="80" y="275" font-family="sans-serif" font-weight="bold" font-size="14" text-anchor="middle" fill="%23000000">테이블 좌석</text><rect x="170" y="0" width="55" height="250" fill="%23c4c4c4"/><rect x="225" y="0" width="105" height="250" fill="%23eeeeee"/><text x="197" y="90" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">4</text><text x="197" y="130" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">구</text><text x="197" y="170" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">역</text><text x="277" y="130" font-family="sans-serif" font-weight="bold" font-size="22" text-anchor="middle" fill="%23000000">기둥</text><rect x="170" y="250" width="160" height="55" fill="%23c4c4c4"/><text x="250" y="285" font-family="sans-serif" font-weight="bold" font-size="16" text-anchor="middle" fill="%23000000">계단형 좌석</text><rect x="365" y="210" width="135" height="175" fill="%23c4c4c4"/><text x="432" y="270" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">1구역</text><text x="432" y="305" font-family="sans-serif" font-weight="bold" font-size="15" text-anchor="middle" fill="%23000000">정수기쪽</text><text x="432" y="330" font-family="sans-serif" font-weight="bold" font-size="15" text-anchor="middle" fill="%23000000">큰 테이블 좌석</text><rect x="155" y="395" width="345" height="105" fill="%23c4c4c4"/><text x="325" y="445" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">2구역</text><text x="325" y="475" font-family="sans-serif" font-weight="bold" font-size="15" text-anchor="middle" fill="%23000000">긴 박스형 좌석</text><rect x="395" y="0" width="105" height="42" fill="%23eeeeee"/><text x="447" y="30" font-family="sans-serif" font-weight="bold" font-size="22" text-anchor="middle" fill="%23000000">E/V</text></svg>'
+  };
+
+  const activitiesConfig = {
+    '1F': ['독서', '서가 탐색', '공부', '개인PC 사용', '비치된 컴퓨터 사용', '휴식', '기타'],
+    '3F': ['독서', '공부', '개인PC 사용', '휴식', '기타']
+  };
+
+  const areasConfig = {
+    '1F': ['1구역', '2구역', '3구역'],
+    '3F': ['1구역', '2구역', '3구역', '4구역']
+  };
+
+  window.onload = function() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('dateInput').value = today;
+    updateDatePreview();
+    switchView('1F');
+  };
+
+  function getDayName(dateStr) {
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    const d = new Date(dateStr);
+    return days[d.getDay()];
+  }
+
+  function updateDatePreview() {
+    const val = document.getElementById('dateInput').value;
+    if (val) {
+      document.getElementById('datePreview').innerText = `(${getDayName(val)})`;
+    }
+  }
+
+  function toggleMap() {
+    const content = document.getElementById('mapContent');
+    const icon = document.getElementById('mapToggleIcon');
+    const isOpen = content.style.display === 'block';
+    content.style.display = isOpen ? 'none' : 'block';
+    icon.innerText = isOpen ? '▼' : '▲';
+  }
+
+  function switchView(view) {
+    if (editIndex !== null) cancelEdit();
+
+    currentView = view;
+    const body = document.body;
+    const tabGuide = document.getElementById('tabGuide');
+    const tab1 = document.getElementById('tab1F');
+    const tab3 = document.getElementById('tab3F');
+    const pageGuide = document.getElementById('pageGuide');
+    const pageRecord = document.getElementById('pageRecord');
+
+    tabGuide.className = 'tab-btn';
+    tab1.className = 'tab-btn';
+    tab3.className = 'tab-btn';
+
+    if (view === 'GUIDE') {
+      body.className = 'theme-guide';
+      tabGuide.className = 'tab-btn active-guide';
+      pageGuide.style.display = 'block';
+      pageRecord.style.display = 'none';
+      return;
+    }
+
+    pageGuide.style.display = 'none';
+    pageRecord.style.display = 'block';
+
+    if (view === '1F') {
+      body.className = 'theme-1f';
+      tab1.className = 'tab-btn active-1f';
+      document.getElementById('currentListTitle').innerText = '도서관(1F) 기록 목록';
+      document.getElementById('mapTitle').innerText = '🗺️ 도서관(1F) 평면도 보기 (클릭하여 열기)';
+    } else {
+      body.className = 'theme-3f';
+      tab3.className = 'tab-btn active-3f';
+      document.getElementById('currentListTitle').innerText = '라운지(3F) 기록 목록';
+      document.getElementById('mapTitle').innerText = '🗺️ 라운지(3F) 평면도 보기 (클릭하여 열기)';
+    }
+
+    document.getElementById('mapImage').src = floorImages[currentView];
+
+    renderAreas();
+    renderActivities();
+    renderTable();
+  }
+
+  function renderAreas() {
+    const container = document.getElementById('areaGroup');
+    container.innerHTML = '';
+    const list = areasConfig[currentView];
+    container.className = `grid-options ${list.length === 4 ? 'grid-4' : 'grid-3'}`;
+
+    list.forEach((area, idx) => {
+      const chip = document.createElement('div');
+      chip.className = `btn-chip ${idx === 0 ? 'active' : ''}`;
+      chip.innerText = area;
+      chip.onclick = function() { selectSingle(this); };
+      container.appendChild(chip);
+    });
+  }
+
+  function renderActivities() {
+    const container = document.getElementById('activityGroup');
+    container.innerHTML = '';
+    document.getElementById('etcWrapper').style.display = 'none';
+    document.getElementById('etcInput').value = '';
+
+    const list = activitiesConfig[currentView];
+    list.forEach((act, idx) => {
+      const chip = document.createElement('div');
+      chip.className = `btn-chip ${idx === 0 ? 'active' : ''}`;
+      chip.innerText = act;
+      chip.onclick = function() { toggleActivity(this, act); };
+      container.appendChild(chip);
+    });
+  }
+
+  function toggleActivity(el, actName) {
+    el.classList.toggle('active');
+    if (actName === '기타') {
+      const isEtcActive = el.classList.contains('active');
+      document.getElementById('etcWrapper').style.display = isEtcActive ? 'block' : 'none';
+      if (isEtcActive) document.getElementById('etcInput').focus();
+    }
+  }
+
+  function selectSingle(el) {
+    el.parentElement.querySelectorAll('.btn-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function setChipActive(containerSelector, textToMatch) {
+    const chips = document.querySelectorAll(`${containerSelector} .btn-chip`);
+    chips.forEach(c => {
+      if (c.innerText.trim() === textToMatch.trim()) {
+        c.classList.add('active');
+      } else {
+        c.classList.remove('active');
+      }
+    });
+  }
+
+  function handleSubmit() {
+    const rawDate = document.getElementById('dateInput').value;
+    if (!rawDate) return alert('날짜를 입력해 주세요.');
+    const dateFormatted = `${rawDate}-${getDayName(rawDate)}`;
+
+    const time = document.querySelector('#timeGroup .active').innerText;
+    const area = document.querySelector('#areaGroup .active').innerText;
+    const gender = document.querySelector('#genderGroup .active').innerText;
+    const age = document.querySelector('#ageGroup .active').innerText;
+    const note = document.getElementById('noteInput').value.trim();
+
+    const actChips = document.querySelectorAll('#activityGroup .btn-chip.active');
+    if (actChips.length === 0) return alert('활동을 1개 이상 선택해 주세요.');
+
+    let activities = [];
+    actChips.forEach(c => {
+      const txt = c.innerText;
+      if (txt === '기타') {
+        const etcDetail = document.getElementById('etcInput').value.trim();
+        activities.push(etcDetail ? `기타(${etcDetail})` : '기타');
+      } else {
+        activities.push(txt);
+      }
+    });
+
+    const recordData = {
+      date: dateFormatted,
+      time: time,
+      area: area,
+      gender: gender,
+      age: age,
+      activity: activities.join(', '),
+      note: note
+    };
+
+    if (editIndex !== null) {
+      dataStore[currentView][editIndex] = recordData;
+      alert('기록이 성공적으로 수정되었습니다.');
+      cancelEdit();
+    } else {
+      dataStore[currentView].push(recordData);
+      document.getElementById('noteInput').value = '';
+      document.getElementById('etcInput').value = '';
+    }
+
+    localStorage.setItem(`visitor_records_${currentView}`, JSON.stringify(dataStore[currentView]));
+    renderTable();
+  }
+
+  function startEdit(index) {
+    editIndex = index;
+    const item = dataStore[currentView][index];
+
+    const rawDate = item.date.slice(0, 10);
+    document.getElementById('dateInput').value = rawDate;
+    updateDatePreview();
+
+    setChipActive('#timeGroup', item.time);
+    setChipActive('#areaGroup', item.area);
+    setChipActive('#genderGroup', item.gender);
+    setChipActive('#ageGroup', item.age);
+
+    const currentActs = item.activity.split(',').map(s => s.trim());
+    const allActChips = document.querySelectorAll('#activityGroup .btn-chip');
+    let etcDetailText = '';
+
+    allActChips.forEach(chip => {
+      const name = chip.innerText;
+      chip.classList.remove('active');
+
+      if (name === '기타') {
+        const etcMatch = currentActs.find(a => a.startsWith('기타'));
+        if (etcMatch) {
+          chip.classList.add('active');
+          const m = etcMatch.match(/\((.*?)\)/);
+          if (m) etcDetailText = m[1];
+        }
+      } else {
+        if (currentActs.includes(name)) {
+          chip.classList.add('active');
+        }
+      }
+    });
+
+    const isEtcActive = document.querySelector('#activityGroup .btn-chip:last-child').classList.contains('active');
+    document.getElementById('etcWrapper').style.display = isEtcActive ? 'block' : 'none';
+    document.getElementById('etcInput').value = etcDetailText;
+
+    document.getElementById('noteInput').value = item.note || '';
+
+    const submitBtn = document.getElementById('btnSubmit');
+    submitBtn.innerText = '✓ 수정 내용 저장';
+    submitBtn.style.backgroundColor = '#0284c7';
+    document.getElementById('btnCancel').style.display = 'block';
+
+    window.scrollTo({ top: 120, behavior: 'smooth' });
+    renderTable();
+  }
+
+  function cancelEdit() {
+    editIndex = null;
+    const submitBtn = document.getElementById('btnSubmit');
+    submitBtn.innerText = '+ 이 방문자 기록 추가';
+    submitBtn.style.backgroundColor = '';
+    document.getElementById('btnCancel').style.display = 'none';
+
+    document.getElementById('noteInput').value = '';
+    document.getElementById('etcInput').value = '';
+    document.getElementById('etcWrapper').style.display = 'none';
+
+    renderTable();
+  }
+
+  function deleteRecord(index) {
+    if (editIndex !== null && editIndex === index) {
+      cancelEdit();
+    }
+    const target = dataStore[currentView][index];
+    const confirmMsg = `[${target.time} / ${target.area} / ${target.gender} / ${target.age}]\n이 기록을 삭제하시겠습니까?`;
+    
+    if (confirm(confirmMsg)) {
+      dataStore[currentView].splice(index, 1);
+      localStorage.setItem(`visitor_records_${currentView}`, JSON.stringify(dataStore[currentView]));
+      renderTable();
+    }
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+    const currentList = dataStore[currentView];
+    document.getElementById('recordCount').innerText = `총 ${currentList.length}건`;
+
+    currentList.forEach((r, idx) => {
+      const tr = document.createElement('tr');
+      if (idx === 0 || currentList[idx - 1].date !== r.date) {
+        tr.classList.add('date-start');
+      }
+      if (editIndex === idx) {
+        tr.classList.add('editing-row');
+      }
+
+      tr.innerHTML = `
+        <td>${r.date}</td>
+        <td>${r.time}</td>
+        <td>${r.area}</td>
+        <td>${r.gender}</td>
+        <td>${r.age}</td>
+        <td>${r.activity}</td>
+        <td>${r.note || '-'}</td>
+        <td style="text-align: center;">
+          <div class="action-btns">
+            <button class="btn-edit" onclick="startEdit(${idx})">수정</button>
+            <button class="btn-del" onclick="deleteRecord(${idx})">삭제</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function exportToExcel() {
+    const list1F = dataStore['1F'];
+    const list3F = dataStore['3F'];
+
+    if (list1F.length === 0 && list3F.length === 0) {
+      return alert('다운로드할 데이터가 없습니다.');
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    const formatData = list => list.map(r => ({
+      '날짜': r.date,
+      '시간': r.time,
+      '구역': r.area,
+      '성별': r.gender,
+      '연령대': r.age,
+      '활동': r.activity,
+      '비고': r.note
+    }));
+
+    if (list1F.length > 0) {
+      const ws1 = XLSX.utils.json_to_sheet(formatData(list1F));
+      XLSX.utils.book_append_sheet(wb, ws1, "도서관_1F");
+    }
+    if (list3F.length > 0) {
+      const ws3 = XLSX.utils.json_to_sheet(formatData(list3F));
+      XLSX.utils.book_append_sheet(wb, ws3, "라운지_3F");
+    }
+
+    const todayStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+    XLSX.writeFile(wb, `과학문화센터_방문자분석_${todayStr}.xlsx`);
+  }
+</script>
+</body>
+</html>
