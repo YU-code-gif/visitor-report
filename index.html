@@ -282,3 +282,804 @@
       <div class="section-title" style="margin-top: 10px;">비고 (예. 빈백 활용, DVD 시청, 가족, 직원 등)</div>
       <div style="margin-bottom: 16px;">
         <input type="text" id="noteInput" class="input-text" placeholder="특이사항이나 메모를 자유롭게 입력하세요">
+      </div>
+
+      <div class="btn-submit-container">
+        <button class="btn-submit" id="btnSubmit" onclick="handleSubmit()">+ 이 방문자 기록 추가</button>
+        <button class="btn-cancel" id="btnCancel" onclick="cancelEdit()">취소</button>
+      </div>
+    </div>
+
+    <!-- 📅 달력 및 기록 목록 카드 -->
+    <div class="card">
+      <div class="list-header">
+        <div>
+          <span class="section-title" id="currentListTitle" style="margin:0;">도서관(1F) 기록 목록</span>
+          <span class="count-badge" id="recordCount">로딩 중...</span>
+        </div>
+      </div>
+
+      <div class="calendar-container">
+        <div class="calendar-header-bar">
+          <div class="cal-title-wrap">
+            <button type="button" class="cal-nav-btn" onclick="changeMonth(-1)">◀</button>
+            <span class="cal-title" id="calMonthTitle">2026년 9월</span>
+            <button type="button" class="cal-nav-btn" onclick="changeMonth(1)">▶</button>
+          </div>
+          <div class="cal-btn-group">
+            <button type="button" class="btn-quick-filter" id="btnFilterToday" onclick="filterByToday()">오늘</button>
+            <button type="button" class="btn-quick-filter" id="btnFilterAll" onclick="filterByAll()">전체 보기</button>
+          </div>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+      </div>
+
+      <div class="record-table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 44px; text-align: center;">No.</th>
+              <th>날짜</th>
+              <th>시간</th>
+              <th>구역</th>
+              <th>성별</th>
+              <th>연령대</th>
+              <th>활동</th>
+              <th>비고</th>
+              <th style="text-align: center; min-width: 85px;">관리</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 화면 렌더링을 방해하지 않도록 스크립트를 body 맨 아래로 배치 -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+  let db = null;
+  let currentView = '1F';
+  let editingDocId = null;
+  let records1F = [];
+  let records3F = [];
+
+  let calCurrentDate = new Date();
+  let calYear = calCurrentDate.getFullYear();
+  let calMonth = calCurrentDate.getMonth();
+  let selectedFilterDate = calCurrentDate.toISOString().slice(0, 10);
+
+  const floorImages = {
+    '1F': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%"><rect width="500" height="500" fill="%23ffffff"/><path d="M 0,0 L 210,0 A 210,210 0 0,1 0,210 Z" fill="%23dfb6ac"/><text x="105" y="70" font-family="sans-serif" font-weight="bold" font-size="28" text-anchor="middle" fill="%23000000">1구역</text><text x="105" y="105" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="%23000000">큰 테이블 + 창가 좌석</text><text x="105" y="130" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="%23000000">+ 원형 탁자/의자</text><path d="M 500,0 L 290,0 A 210,210 0 0,0 500,210 Z" fill="%23dfb6ac"/><text x="395" y="70" font-family="sans-serif" font-weight="bold" font-size="28" text-anchor="middle" fill="%23000000">2구역</text><text x="395" y="105" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="%23000000">PC + 좌식</text><path d="M 500,500 L 290,500 A 210,210 0 0,1 500,290 Z" fill="%23dfb6ac"/><text x="400" y="415" font-family="sans-serif" font-weight="bold" font-size="28" text-anchor="middle" fill="%23000000">3구역</text><text x="400" y="445" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="%23000000">어린이 서가 + 소파</text><rect x="0" y="275" width="45" height="110" fill="%23f9e9e5"/><text x="22" y="310" font-family="sans-serif" font-weight="bold" font-size="20" text-anchor="middle" fill="%23000000">출</text><text x="22" y="340" font-family="sans-serif" font-weight="bold" font-size="20" text-anchor="middle" fill="%23000000">입</text><text x="22" y="370" font-family="sans-serif" font-weight="bold" font-size="20" text-anchor="middle" fill="%23000000">구</text><rect x="0" y="435" width="225" height="65" fill="%23f9e9e5"/><text x="112" y="478" font-family="sans-serif" font-weight="bold" font-size="22" text-anchor="middle" fill="%23000000">데 스 크</text></svg>',
+    '3F': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%"><rect width="500" height="500" fill="%23ffffff"/><rect x="25" y="0" width="110" height="500" fill="%23c4c4c4"/><text x="10" y="210" font-family="sans-serif" font-weight="bold" font-size="18" fill="%23000000">창</text><text x="10" y="245" font-family="sans-serif" font-weight="bold" font-size="18" fill="%23000000">가</text><text x="80" y="200" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">3구역</text><text x="80" y="235" font-family="sans-serif" font-weight="bold" font-size="14" text-anchor="middle" fill="%23000000">빈백 좌석</text><text x="80" y="255" font-family="sans-serif" font-weight="bold" font-size="14" text-anchor="middle" fill="%23000000">+ 나머지</text><text x="80" y="275" font-family="sans-serif" font-weight="bold" font-size="14" text-anchor="middle" fill="%23000000">테이블 좌석</text><rect x="170" y="0" width="55" height="250" fill="%23c4c4c4"/><rect x="225" y="0" width="105" height="250" fill="%23eeeeee"/><text x="197" y="90" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">4</text><text x="197" y="130" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">구</text><text x="197" y="170" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">역</text><text x="277" y="130" font-family="sans-serif" font-weight="bold" font-size="22" text-anchor="middle" fill="%23000000">기둥</text><rect x="170" y="250" width="160" height="55" fill="%23c4c4c4"/><text x="250" y="285" font-family="sans-serif" font-weight="bold" font-size="16" text-anchor="middle" fill="%23000000">계단형 좌석</text><rect x="365" y="210" width="135" height="175" fill="%23c4c4c4"/><text x="432" y="270" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">1구역</text><text x="432" y="305" font-family="sans-serif" font-weight="bold" font-size="15" text-anchor="middle" fill="%23000000">정수기쪽</text><text x="432" y="330" font-family="sans-serif" font-weight="bold" font-size="15" text-anchor="middle" fill="%23000000">큰 테이블 좌석</text><rect x="155" y="395" width="345" height="105" fill="%23c4c4c4"/><text x="325" y="445" font-family="sans-serif" font-weight="bold" font-size="26" text-anchor="middle" fill="%23000000">2구역</text><text x="325" y="475" font-family="sans-serif" font-weight="bold" font-size="15" text-anchor="middle" fill="%23000000">긴 박스형 좌석</text><rect x="395" y="0" width="105" height="42" fill="%23eeeeee"/><text x="447" y="30" font-family="sans-serif" font-weight="bold" font-size="22" text-anchor="middle" fill="%23000000">E/V</text></svg>'
+  };
+
+  const activitiesConfig = {
+    '1F': ['독서', '서가 탐색', '공부', '개인PC 사용', '비치된 컴퓨터 사용', '휴식', '기타'],
+    '3F': ['독서', '공부', '개인PC 사용', '휴식', '기타']
+  };
+
+  const areasConfig = {
+    '1F': ['1구역', '2구역', '3구역'],
+    '3F': ['1구역', '2구역', '3구역', '4구역']
+  };
+
+  function getExpectedSurveyTime() {
+    const now = new Date();
+    const h = now.getHours();
+    const m = now.getMinutes();
+    return (h < 15 || (h === 15 && m <= 30)) ? '11:00' : '16:00';
+  }
+
+  function sortRecords(list) {
+    return (list || []).slice().sort((a, b) => {
+      const dateA = (a && a.date ? a.date : '').slice(0, 10);
+      const dateB = (b && b.date ? b.date : '').slice(0, 10);
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+
+      const timeA = (a && a.time) ? a.time : '';
+      const timeB = (b && b.time) ? b.time : '';
+      if (timeA !== timeB) return timeA.localeCompare(timeB);
+
+      const areaA = (a && a.area) ? a.area : '';
+      const areaB = (b && b.area) ? b.area : '';
+      if (areaA !== areaB) return areaA.localeCompare(areaB);
+
+      return ((a && a.createdAt) || 0) - ((b && b.createdAt) || 0);
+    });
+  }
+
+  // 초기 실행: UI를 먼저 100% 그리고 그 다음 Firebase에 연결 시도
+  (function initApp() {
+    const today = new Date().toISOString().split('T')[0];
+    const dateInput = document.getElementById('dateInput');
+    if (dateInput) dateInput.value = today;
+    updateDatePreview();
+    switchView('GUIDE');
+
+    // Firebase 안전 초기화
+    try {
+      if (typeof firebase !== 'undefined') {
+        const firebaseConfig = {
+          apiKey: "AIzaSyCM1dGwhj8qn6FL8qgh31OlMv7Vl_HPSRI",
+          authDomain: "ibs-visitor.firebaseapp.com",
+          projectId: "ibs-visitor",
+          storageBucket: "ibs-visitor.firebasestorage.app",
+          messagingSenderId: "168288023555",
+          appId: "1:168288023555:web:ef6255073c5b2d2b168a36",
+          measurementId: "G-H5Z41WWPQZ"
+        };
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+
+        const badge = document.getElementById('syncStatusBadge');
+        if (badge) {
+          badge.innerText = '● 실시간 연동중';
+          badge.style.color = '#16a34a';
+        }
+        listenToFirebase();
+      } else {
+        showNetworkWarning();
+      }
+    } catch (e) {
+      console.warn("Firebase 초기화 제한:", e);
+      showNetworkWarning();
+    }
+  })();
+
+  function showNetworkWarning() {
+    const bar = document.getElementById('networkWarning');
+    if (bar) bar.style.display = 'block';
+    const badge = document.getElementById('syncStatusBadge');
+    if (badge) {
+      badge.innerText = '● 오프라인/원내망 감지';
+      badge.style.color = '#f59e0b';
+    }
+    const countBadge = document.getElementById('recordCount');
+    if (countBadge) countBadge.innerText = '모바일 데이터 연결 필요';
+  }
+
+  function listenToFirebase() {
+    if (!db) return;
+    db.collection('records_1F').onSnapshot(snapshot => {
+      records1F = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      if (currentView === '1F') {
+        renderCalendar();
+        renderTable();
+      }
+    }, err => {
+      console.warn("1F 연동 실패 (보안망 차단):", err);
+      showNetworkWarning();
+    });
+
+    db.collection('records_3F').onSnapshot(snapshot => {
+      records3F = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      if (currentView === '3F') {
+        renderCalendar();
+        renderTable();
+      }
+    }, err => {
+      console.warn("3F 연동 실패 (보안망 차단):", err);
+      showNetworkWarning();
+    });
+  }
+
+  function getDayName(dateStr) {
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    const d = new Date(dateStr);
+    return isNaN(d) ? '' : days[d.getDay()];
+  }
+
+  function updateDatePreview() {
+    const val = document.getElementById('dateInput').value;
+    const preview = document.getElementById('datePreview');
+    if (val && preview) {
+      preview.innerText = `(${getDayName(val)})`;
+    }
+  }
+
+  function handleFormDateChange() {
+    updateDatePreview();
+    const val = document.getElementById('dateInput').value;
+    if (val) {
+      selectedFilterDate = val;
+      const parts = val.split('-');
+      calYear = parseInt(parts[0], 10);
+      calMonth = parseInt(parts[1], 10) - 1;
+      renderCalendar();
+      renderTable();
+    }
+  }
+
+  function toggleMap() {
+    const content = document.getElementById('mapContent');
+    const icon = document.getElementById('mapToggleIcon');
+    const isOpen = content.style.display === 'block';
+    content.style.display = isOpen ? 'none' : 'block';
+    icon.innerText = isOpen ? '▼' : '▲';
+  }
+
+  function updateStatusDisplay() {
+    const timeActive = document.querySelector('#timeGroup .active');
+    const areaActive = document.querySelector('#areaGroup .active');
+
+    const bannerTime = document.getElementById('bannerTimePill');
+    const bannerArea = document.getElementById('bannerAreaPill');
+    const alertBox = document.getElementById('mismatchAlert');
+    const alertMsg = document.getElementById('mismatchMsg');
+
+    const selectedTime = timeActive ? timeActive.innerText.trim() : null;
+    const selectedArea = areaActive ? areaActive.innerText.trim() : null;
+
+    if (bannerTime) bannerTime.innerText = selectedTime || '시간 미선택';
+    if (bannerArea) {
+      if (selectedArea) {
+        bannerArea.innerText = selectedArea;
+        bannerArea.classList.remove('muted');
+      } else {
+        bannerArea.innerText = '구역 선택 필요';
+        bannerArea.classList.add('muted');
+      }
+    }
+
+    const expectedTime = getExpectedSurveyTime();
+    if (alertBox && alertMsg) {
+      if (selectedTime && selectedTime !== expectedTime) {
+        alertBox.style.display = 'flex';
+        alertMsg.innerText = `⚠️ 지금은 ${expectedTime} 조사 시간대예요. (${selectedTime} 기록 중)`;
+      } else {
+        alertBox.style.display = 'none';
+      }
+    }
+  }
+
+  function fixTimeToCurrent() {
+    const expected = getExpectedSurveyTime();
+    setChipActive('#timeGroup', expected);
+    updateStatusDisplay();
+  }
+
+  function resetForm(keepContext = false) {
+    if (!keepContext) {
+      setChipActive('#timeGroup', getExpectedSurveyTime());
+      document.querySelectorAll('#areaGroup .btn-chip').forEach(c => c.classList.remove('active'));
+    }
+
+    document.querySelectorAll('#genderGroup .btn-chip').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('#ageGroup .btn-chip').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('#activityGroup .btn-chip').forEach(c => c.classList.remove('active'));
+
+    const noteInput = document.getElementById('noteInput');
+    const etcInput = document.getElementById('etcInput');
+    const etcWrap = document.getElementById('etcWrapper');
+    if (noteInput) noteInput.value = '';
+    if (etcInput) etcInput.value = '';
+    if (etcWrap) etcWrap.style.display = 'none';
+
+    updateStatusDisplay();
+  }
+
+  function startRecordFromGuide() {
+    const day = new Date().getDay();
+    const targetView = (day === 1) ? '3F' : '1F';
+    switchView(targetView);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function switchView(view) {
+    if (editingDocId !== null) cancelEdit();
+
+    currentView = view;
+    const body = document.body;
+    const tabGuide = document.getElementById('tabGuide');
+    const tab1 = document.getElementById('tab1F');
+    const tab3 = document.getElementById('tab3F');
+    const pageGuide = document.getElementById('pageGuide');
+    const pageRecord = document.getElementById('pageRecord');
+
+    tabGuide.className = 'tab-btn';
+    tab1.className = 'tab-btn';
+    tab3.className = 'tab-btn';
+
+    if (view === 'GUIDE') {
+      body.className = 'theme-guide';
+      tabGuide.className = 'tab-btn active-guide';
+      pageGuide.style.display = 'block';
+      pageRecord.style.display = 'none';
+      return;
+    }
+
+    pageGuide.style.display = 'none';
+    pageRecord.style.display = 'block';
+
+    if (view === '1F') {
+      body.className = 'theme-1f';
+      tab1.className = 'tab-btn active-1f';
+      document.getElementById('currentListTitle').innerText = '도서관(1F) 기록 목록';
+      document.getElementById('mapTitle').innerText = '🗺️ 도서관(1F) 평면도 보기 (클릭하여 열기)';
+    } else {
+      body.className = 'theme-3f';
+      tab3.className = 'tab-btn active-3f';
+      document.getElementById('currentListTitle').innerText = '라운지(3F) 기록 목록';
+      document.getElementById('mapTitle').innerText = '🗺️ 라운지(3F) 평면도 보기 (클릭하여 열기)';
+    }
+
+    document.getElementById('mapImage').src = floorImages[currentView];
+
+    renderAreas();
+    renderActivities();
+    resetForm(false);
+    renderCalendar();
+    renderTable();
+  }
+
+  function renderAreas() {
+    const container = document.getElementById('areaGroup');
+    container.innerHTML = '';
+    const list = areasConfig[currentView] || [];
+    container.className = `grid-options ${list.length === 4 ? 'grid-4' : 'grid-3'}`;
+
+    list.forEach(area => {
+      const chip = document.createElement('div');
+      chip.className = 'btn-chip';
+      chip.innerText = area;
+      chip.onclick = function() { 
+        selectSingle(this);
+        updateStatusDisplay();
+      };
+      container.appendChild(chip);
+    });
+  }
+
+  function renderActivities() {
+    const container = document.getElementById('activityGroup');
+    container.innerHTML = '';
+    document.getElementById('etcWrapper').style.display = 'none';
+    document.getElementById('etcInput').value = '';
+
+    const list = activitiesConfig[currentView] || [];
+    list.forEach(act => {
+      const chip = document.createElement('div');
+      chip.className = 'btn-chip';
+      chip.innerText = act;
+      chip.onclick = function() { toggleActivity(this, act); };
+      container.appendChild(chip);
+    });
+  }
+
+  function toggleActivity(el, actName) {
+    el.classList.toggle('active');
+    if (actName === '기타') {
+      const isEtcActive = el.classList.contains('active');
+      document.getElementById('etcWrapper').style.display = isEtcActive ? 'block' : 'none';
+      if (isEtcActive) document.getElementById('etcInput').focus();
+    }
+  }
+
+  function handleTimeSelect(el) {
+    selectSingle(el);
+    updateStatusDisplay();
+  }
+
+  function selectSingle(el) {
+    el.parentElement.querySelectorAll('.btn-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function setChipActive(containerSelector, textToMatch) {
+    const container = document.querySelector(containerSelector);
+    if (!container) return;
+    let matched = false;
+    const chips = container.querySelectorAll('.btn-chip');
+    chips.forEach(c => {
+      if (c.innerText.trim() === (textToMatch || '').trim()) {
+        c.classList.add('active');
+        matched = true;
+      } else {
+        c.classList.remove('active');
+      }
+    });
+
+    if (!matched && containerSelector === '#timeGroup' && textToMatch) {
+      const oldTimeChip = document.createElement('div');
+      oldTimeChip.className = 'btn-chip active';
+      oldTimeChip.innerText = textToMatch;
+      oldTimeChip.onclick = function() { handleTimeSelect(this); };
+      container.appendChild(oldTimeChip);
+    }
+  }
+
+  async function handleSubmit() {
+    if (!db) {
+      return alert('원내 보안망(방화벽) 환경에서는 저장이 불가능합니다.\nWi-Fi를 끄고 모바일 데이터(LTE/5G)로 접속해 주세요!');
+    }
+
+    const rawDate = document.getElementById('dateInput').value;
+    if (!rawDate) return alert('날짜를 입력해 주세요.');
+    const dateFormatted = `${rawDate}-${getDayName(rawDate)}`;
+
+    const timeEl = document.querySelector('#timeGroup .active');
+    if (!timeEl) return alert('조사 시간을 선택해 주세요 (11:00 또는 16:00).');
+    const time = timeEl.innerText;
+
+    const areaEl = document.querySelector('#areaGroup .active');
+    if (!areaEl) return alert('구역을 선택해 주세요.');
+    const area = areaEl.innerText;
+
+    const genderEl = document.querySelector('#genderGroup .active');
+    if (!genderEl) return alert('성별을 선택해 주세요.');
+    const gender = genderEl.innerText;
+
+    const ageEl = document.querySelector('#ageGroup .active');
+    if (!ageEl) return alert('연령대를 선택해 주세요.');
+    const age = ageEl.innerText;
+
+    const actChips = document.querySelectorAll('#activityGroup .btn-chip.active');
+    if (actChips.length === 0) return alert('주요 활동을 1개 이상 선택해 주세요.');
+
+    let activities = [];
+    actChips.forEach(c => {
+      const txt = c.innerText;
+      if (txt === '기타') {
+        const etcDetail = document.getElementById('etcInput').value.trim();
+        activities.push(etcDetail ? `기타(${etcDetail})` : '기타');
+      } else {
+        activities.push(txt);
+      }
+    });
+
+    const note = document.getElementById('noteInput').value.trim();
+    const collectionName = currentView === '1F' ? 'records_1F' : 'records_3F';
+    const recordData = {
+      date: dateFormatted,
+      time: time,
+      area: area,
+      gender: gender,
+      age: age,
+      activity: activities.join(', '),
+      note: note
+    };
+
+    const submitBtn = document.getElementById('btnSubmit');
+    submitBtn.disabled = true;
+    submitBtn.innerText = '저장 중...';
+
+    try {
+      if (editingDocId !== null) {
+        await db.collection(collectionName).doc(editingDocId).update(recordData);
+        alert('기록이 수정되었습니다.');
+        cancelEdit();
+      } else {
+        recordData.createdAt = Date.now();
+        await db.collection(collectionName).add(recordData);
+        selectedFilterDate = rawDate;
+        resetForm(true);
+      }
+    } catch (err) {
+      alert('저장 실패: ' + err.message);
+    } finally {
+      submitBtn.disabled = false;
+      if (editingDocId === null) {
+        submitBtn.innerText = '+ 이 방문자 기록 추가';
+      }
+    }
+  }
+
+  function startEdit(docId) {
+    editingDocId = docId;
+    const currentList = currentView === '1F' ? records1F : records3F;
+    const item = currentList.find(r => r.id === docId);
+    if (!item) return;
+
+    const rawDate = (item.date || '').slice(0, 10);
+    document.getElementById('dateInput').value = rawDate;
+    updateDatePreview();
+
+    setChipActive('#timeGroup', item.time);
+    setChipActive('#areaGroup', item.area);
+    setChipActive('#genderGroup', item.gender);
+    setChipActive('#ageGroup', item.age);
+
+    const currentActs = (item.activity || '').split(',').map(s => s.trim());
+    const allActChips = document.querySelectorAll('#activityGroup .btn-chip');
+    let etcDetailText = '';
+
+    allActChips.forEach(chip => {
+      const name = chip.innerText;
+      chip.classList.remove('active');
+
+      if (name === '기타') {
+        const etcMatch = currentActs.find(a => a.startsWith('기타'));
+        if (etcMatch) {
+          chip.classList.add('active');
+          const m = etcMatch.match(/\((.*?)\)/);
+          if (m) etcDetailText = m[1];
+        }
+      } else {
+        if (currentActs.includes(name)) {
+          chip.classList.add('active');
+        }
+      }
+    });
+
+    const isEtcActive = document.querySelector('#activityGroup .btn-chip:last-child').classList.contains('active');
+    document.getElementById('etcWrapper').style.display = isEtcActive ? 'block' : 'none';
+    document.getElementById('etcInput').value = etcDetailText;
+
+    document.getElementById('noteInput').value = item.note || '';
+
+    const submitBtn = document.getElementById('btnSubmit');
+    submitBtn.innerText = '✓ 수정 내용 저장';
+    submitBtn.style.backgroundColor = '#0284c7';
+    document.getElementById('btnCancel').style.display = 'block';
+
+    updateStatusDisplay();
+    window.scrollTo({ top: 120, behavior: 'smooth' });
+    renderTable();
+  }
+
+  function cancelEdit() {
+    editingDocId = null;
+    const submitBtn = document.getElementById('btnSubmit');
+    submitBtn.innerText = '+ 이 방문자 기록 추가';
+    submitBtn.style.backgroundColor = '';
+    document.getElementById('btnCancel').style.display = 'none';
+
+    const timeContainer = document.getElementById('timeGroup');
+    timeContainer.innerHTML = `
+      <div class="btn-chip" onclick="handleTimeSelect(this)">11:00</div>
+      <div class="btn-chip" onclick="handleTimeSelect(this)">16:00</div>
+    `;
+
+    resetForm(false);
+    renderTable();
+  }
+
+  async function deleteRecord(docId) {
+    if (!db) return alert('원내 보안망 환경에서는 삭제가 불가능합니다.');
+    if (editingDocId === docId) cancelEdit();
+    const currentList = currentView === '1F' ? records1F : records3F;
+    const target = currentList.find(r => r.id === docId);
+    if (!target) return;
+
+    const confirmMsg = `[${target.date} | ${target.time} | ${target.area} | ${target.gender} | ${target.age}]\n이 기록을 삭제하시겠습니까?`;
+    if (confirm(confirmMsg)) {
+      const collectionName = currentView === '1F' ? 'records_1F' : 'records_3F';
+      await db.collection(collectionName).doc(docId).delete();
+    }
+  }
+
+  function changeMonth(delta) {
+    calMonth += delta;
+    if (calMonth < 0) {
+      calMonth = 11;
+      calYear--;
+    } else if (calMonth > 11) {
+      calMonth = 0;
+      calYear++;
+    }
+    renderCalendar();
+  }
+
+  function filterByToday() {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    selectedFilterDate = todayStr;
+    const parts = todayStr.split('-');
+    calYear = parseInt(parts[0], 10);
+    calMonth = parseInt(parts[1], 10) - 1;
+    renderCalendar();
+    renderTable();
+  }
+
+  function filterByAll() {
+    selectedFilterDate = 'ALL';
+    renderCalendar();
+    renderTable();
+  }
+
+  function selectCalendarDate(dateStr) {
+    selectedFilterDate = dateStr;
+    document.getElementById('dateInput').value = dateStr;
+    updateDatePreview();
+    renderCalendar();
+    renderTable();
+  }
+
+  function renderCalendar() {
+    const grid = document.getElementById('calendarGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const titleEl = document.getElementById('calMonthTitle');
+    if (titleEl) titleEl.innerText = `${calYear}년 ${calMonth + 1}월`;
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const btnToday = document.getElementById('btnFilterToday');
+    const btnAll = document.getElementById('btnFilterAll');
+    if (btnToday) btnToday.classList.toggle('active', selectedFilterDate === todayStr);
+    if (btnAll) btnAll.classList.toggle('active', selectedFilterDate === 'ALL');
+
+    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+    weekdays.forEach(day => {
+      const el = document.createElement('div');
+      el.className = 'cal-weekday';
+      el.innerText = day;
+      grid.appendChild(el);
+    });
+
+    const currentList = currentView === '1F' ? records1F : records3F;
+    const countsByDate = {};
+    (currentList || []).forEach(r => {
+      if (r && r.date) {
+        const d = r.date.slice(0, 10);
+        countsByDate[d] = (countsByDate[d] || 0) + 1;
+      }
+    });
+
+    const firstDayIndex = new Date(calYear, calMonth, 1).getDay();
+    const lastDayOfMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+    for (let i = 0; i < firstDayIndex; i++) {
+      const emptyCell = document.createElement('div');
+      emptyCell.className = 'cal-day-cell empty';
+      grid.appendChild(emptyCell);
+    }
+
+    for (let d = 1; d <= lastDayOfMonth; d++) {
+      const dayStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const count = countsByDate[dayStr] || 0;
+
+      const cell = document.createElement('div');
+      cell.className = 'cal-day-cell';
+      if (dayStr === todayStr) cell.classList.add('today');
+      if (count > 0) cell.classList.add('has-records');
+      if (selectedFilterDate === dayStr) cell.classList.add('selected');
+
+      cell.innerHTML = `<span>${d}</span>`;
+      if (count > 0) {
+        cell.innerHTML += `<span class="cal-count-badge">${count}</span>`;
+      }
+
+      cell.onclick = () => selectCalendarDate(dayStr);
+      grid.appendChild(cell);
+    }
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('tableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    const rawList = currentView === '1F' ? records1F : records3F;
+    const sortedList = sortRecords(rawList);
+
+    const dayCounts = {};
+    sortedList.forEach(r => {
+      if (r && r.date) {
+        dayCounts[r.date] = (dayCounts[r.date] || 0) + 1;
+      }
+    });
+
+    let filteredList = sortedList;
+    if (selectedFilterDate !== 'ALL') {
+      filteredList = sortedList.filter(r => (r.date || '').slice(0, 10) === selectedFilterDate);
+    }
+
+    const countBadge = document.getElementById('recordCount');
+    if (countBadge) {
+      if (selectedFilterDate === 'ALL') {
+        countBadge.innerText = `전체 ${sortedList.length}건`;
+      } else {
+        countBadge.innerText = `${selectedFilterDate} (${filteredList.length}건)`;
+      }
+    }
+
+    if (filteredList.length === 0) {
+      const emptyTr = document.createElement('tr');
+      emptyTr.innerHTML = `
+        <td colspan="9" style="text-align: center; padding: 32px 14px; color: #94a3b8; font-weight: 600;">
+          📅 <b>${selectedFilterDate}</b> 일자의 기록이 없습니다.<br>
+          <span style="font-size: 0.78rem; color: #cbd5e1; margin-top: 4px; display: inline-block;">위 입력 폼에서 방문자를 추가하면 바로 표시됩니다.</span>
+        </td>
+      `;
+      tbody.appendChild(emptyTr);
+      return;
+    }
+
+    let currentDayIndex = 0;
+    let lastDate = '';
+
+    filteredList.forEach((r) => {
+      if (r.date !== lastDate) {
+        lastDate = r.date;
+        currentDayIndex = 1;
+
+        const headerTr = document.createElement('tr');
+        headerTr.className = 'date-section-header';
+        headerTr.innerHTML = `
+          <td colspan="9">
+            📅 <strong>${r.date}</strong>
+            <span class="badge-day-total">당일 총 <strong>${dayCounts[r.date] || 0}</strong>명</span>
+          </td>
+        `;
+        tbody.appendChild(headerTr);
+      } else {
+        currentDayIndex++;
+      }
+
+      const tr = document.createElement('tr');
+      if (editingDocId === r.id) {
+        tr.classList.add('editing-row');
+      }
+
+      tr.innerHTML = `
+        <td style="text-align: center; font-weight: 700; color: #64748b;">${currentDayIndex}</td>
+        <td>${r.date || '-'}</td>
+        <td>${r.time || '-'}</td>
+        <td>${r.area || '-'}</td>
+        <td>${r.gender || '-'}</td>
+        <td>${r.age || '-'}</td>
+        <td>${r.activity || '-'}</td>
+        <td>${r.note || '-'}</td>
+        <td style="text-align: center;">
+          <div class="action-btns">
+            <button class="btn-edit" onclick="startEdit('${r.id}')">수정</button>
+            <button class="btn-del" onclick="deleteRecord('${r.id}')">삭제</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function exportToExcel() {
+    if ((records1F || []).length === 0 && (records3F || []).length === 0) {
+      return alert('다운로드할 데이터가 없습니다.');
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    const formatData = list => {
+      const sorted = sortRecords(list);
+      let dayIdx = 0;
+      let prevDate = '';
+
+      return sorted.map(r => {
+        if (r.date !== prevDate) {
+          prevDate = r.date;
+          dayIdx = 1;
+        } else {
+          dayIdx++;
+        }
+
+        return {
+          '당일No': dayIdx,
+          '날짜': r.date || '',
+          '시간': r.time || '',
+          '구역': r.area || '',
+          '성별': r.gender || '',
+          '연령대': r.age || '',
+          '활동': r.activity || '',
+          '비고': r.note || ''
+        };
+      });
+    };
+
+    if (records1F.length > 0) {
+      const ws1 = XLSX.utils.json_to_sheet(formatData(records1F));
+      XLSX.utils.book_append_sheet(wb, ws1, "도서관_1F");
+    }
+    if (records3F.length > 0) {
+      const ws3 = XLSX.utils.json_to_sheet(formatData(records3F));
+      XLSX.utils.book_append_sheet(wb, ws3, "라운지_3F");
+    }
+
+    const todayStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+    XLSX.writeFile(wb, `과학문화센터_방문자분석_${todayStr}.xlsx`);
+  }
+</script>
+</body>
+</html>
